@@ -30,7 +30,6 @@ const sheetTitle = document.querySelector("#sheetTitle");
 const sheetMeta = document.querySelector("#sheetMeta");
 const sheetLead = document.querySelector("#sheetLead");
 const sheetContent = document.querySelector("#sheetContent");
-const wallCopy = document.querySelector(".wall-copy");
 
 let roomScene = {
   updateScreen() {},
@@ -50,65 +49,11 @@ let roomScene = {
   focusOnCameraIndex() {}
 };
 
-function startWallCopyAnimation() {
-  if (!wallCopy || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-  const textNodes = [];
-  const walker = document.createTreeWalker(wallCopy, NodeFilter.SHOW_TEXT, {
-    acceptNode(node) {
-      const parent = node.parentElement;
-      if (!parent) return NodeFilter.FILTER_SKIP;
-      if (parent.closest("em")) return NodeFilter.FILTER_REJECT;
-      return node.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-    }
-  });
-
-  let currentNode = walker.nextNode();
-  while (currentNode) {
-    textNodes.push(currentNode);
-    currentNode = walker.nextNode();
-  }
-
-  let characterIndex = 0;
-  textNodes.forEach((textNode) => {
-    const fragment = document.createDocumentFragment();
-    textNode.textContent.split(/(\s+)/).forEach((token) => {
-      if (/^\s+$/.test(token)) {
-        [...token].forEach((character) => {
-          const span = document.createElement("span");
-          span.className = "typewriter-character is-space";
-          span.textContent = character;
-          span.style.setProperty("--character-delay", `${characterIndex * 24}ms`);
-          fragment.appendChild(span);
-          characterIndex += 1;
-        });
-        return;
-      }
-
-      if (!token) return;
-      const word = document.createElement("span");
-      word.className = "typewriter-word";
-      [...token].forEach((character) => {
-        const span = document.createElement("span");
-        span.className = "typewriter-character";
-        span.textContent = character;
-        span.style.setProperty("--character-delay", `${characterIndex * 24}ms`);
-        word.appendChild(span);
-        characterIndex += 1;
-      });
-      fragment.appendChild(word);
-    });
-    textNode.replaceWith(fragment);
-  });
-
-  wallCopy.classList.add("is-typing");
-}
-
 let insertedCassetteIndex = null;
 
 async function scheduleThreeSceneInitialization() {
   try {
-    const { createRoomScene } = await import("./assets/datas/room.js");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=title-layout-fix-2");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(() => roomScene.focusOnProjects());
     roomScene.setTelevisionActionHandler(() => roomScene.focusOnProjects());
@@ -125,7 +70,6 @@ async function scheduleThreeSceneInitialization() {
 }
 
 requestAnimationFrame(() => requestAnimationFrame(scheduleThreeSceneInitialization));
-startWallCopyAnimation();
 
 function selectProject(index, openSheet = true) {
   const project = projects[index];

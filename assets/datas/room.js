@@ -328,6 +328,7 @@ export function createRoomScene(container, projects = []) {
   };
 
   addDynamicSky(scene);
+  scene.add(createWorldTitleLabel());
 
   scene.add(box(23, 0.25, 17, floor, [0, -0.15, 1.5]));
   scene.add(box(9.8, 0.18, 5.5, kitchenFloor, [-7.2, -0.06, 7.5]));
@@ -527,11 +528,21 @@ export function createRoomScene(container, projects = []) {
     ,keys: new Set(), yaw: 0, pitch: 0, speed: 4.5
   };
 
+  function getObjectScaleValue(object) {
+    if (!object || !object.scale) return 1;
+    const scaleValues = [object.scale.x, object.scale.y, object.scale.z].filter((value) => Number.isFinite(value));
+    if (!scaleValues.length) return 1;
+    const averageScale = scaleValues.reduce((sum, value) => sum + value, 0) / scaleValues.length;
+    return Number.isFinite(averageScale) ? averageScale : 1;
+  }
+
   function applyConfiguredPosition(id, object) {
     const config = configuredPositions[id];
     if (!config || !object) return;
     object.position.set(config.position.x, config.position.y, config.position.z);
     object.rotation.y = THREE.MathUtils.degToRad(config.rotationY || 0);
+    const nextScale = Number.isFinite(config.scale) ? config.scale : getObjectScaleValue(object);
+    if (nextScale > 0) object.scale.setScalar(nextScale);
   }
 
   function getLocalPointFromWorld(object, worldPoint) {
@@ -700,7 +711,8 @@ export function createRoomScene(container, projects = []) {
           y: Number(object.position.y.toFixed(3)),
           z: Number(object.position.z.toFixed(3))
         },
-        rotationY: Number(THREE.MathUtils.radToDeg(object.rotation.y).toFixed(2))
+        rotationY: Number(THREE.MathUtils.radToDeg(object.rotation.y).toFixed(2)),
+        scale: Number(getObjectScaleValue(object).toFixed(3))
       };
     });
     configuredPositions = positions;
@@ -872,6 +884,54 @@ export function createRoomScene(container, projects = []) {
     return new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({ map: labelTexture, transparent: backgroundColor === "transparent" }));
   }
 
+  function createWorldTitleLabel() {
+    const titleGroup = new THREE.Group();
+    titleGroup.name = "world-title-label";
+    titleGroup.userData.editorId = "world-title-label";
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1600;
+    canvas.height = 720;
+    const context = canvas.getContext("2d");
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.shadowColor = "rgba(0, 0, 0, 0.35)";
+    context.shadowBlur = 40;
+
+    context.fillStyle = "#f8efe3";
+    context.font = "600 150px 'Space Grotesk', sans-serif";
+    const lines = ["Bonjour !", "Bienvenue sur mon", "Portfolio"];
+    const titleStartY = 155;
+    const titleLineGap = 150;
+    lines.forEach((line, index) => {
+      context.fillText(line, canvas.width / 2, titleStartY + index * titleLineGap);
+    });
+
+    context.font = "500 34px 'DM Mono', monospace";
+    context.letterSpacing = "0.18em";
+    context.fillStyle = "rgba(245, 227, 196, 0.92)";
+    context.fillText("MATEO LEUILLIER / BTS SIO SLAM", canvas.width / 2, 640);
+
+    context.font = "500 28px 'DM Mono', monospace";
+    context.fillStyle = "rgba(216, 210, 191, 0.9)";
+    context.fillText("CENTRE-VAL-DE-LOIRE / FRANCE", canvas.width / 2, 688);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
+
+    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 4.5), material);
+    mesh.name = "world-title-label-mesh";
+    titleGroup.add(mesh);
+    titleGroup.position.set(-1.8, 5.1, -5.82);
+    titleGroup.rotation.y = 0;
+    return titleGroup;
+  }
+
   function loadRoomProps() {
     const textureLoader = new THREE.TextureLoader();
     const televisionTexture = textureLoader.load("assets/textures/television.png");
@@ -1041,6 +1101,7 @@ export function createRoomScene(container, projects = []) {
 
   function getEditorObjects() {
     const props = [
+      { id: "world-title-label", label: "Titre d'accueil", object: scene.getObjectByName("world-title-label") },
       { id: "television", label: "Télévision", object: roomTelevision },
       { id: "cup", label: "Tasse", object: roomCup },
       { id: "laptop", label: "Laptop", object: roomLaptop },
@@ -1068,6 +1129,7 @@ export function createRoomScene(container, projects = []) {
     const { object } = editor.selected;
     ["x", "y", "z"].forEach((axis) => document.querySelector(`#editor-${axis}`).value = object.position[axis].toFixed(2));
     document.querySelector("#editor-rotation").value = THREE.MathUtils.radToDeg(object.rotation.y).toFixed(1);
+    document.querySelector("#editor-scale").value = getObjectScaleValue(object).toFixed(2);
   }
 
   function selectEditorObject(id) {
@@ -1108,7 +1170,7 @@ export function createRoomScene(container, projects = []) {
     const panel = document.createElement("aside");
     panel.id = "roomEditor";
     panel.className = "room-editor";
-    panel.innerHTML = `<div class="room-editor-title">ÉDITION LIBRE</div><button type="button" id="roomEditorClose">QUITTER</button><label>Objet<select id="editor-object"></select></label><div class="editor-fields"><label>X<input id="editor-x" type="number" step="0.05"></label><label>Y<input id="editor-y" type="number" step="0.05"></label><label>Z<input id="editor-z" type="number" step="0.05"></label></div><label>Rotation Y<input id="editor-rotation" type="number" step="1"></label><label>Caméra<select id="editor-camera-position"></select></label><button type="button" id="roomEditorSave">VALIDER</button><button type="button" id="roomEditorClearCache">VIDER LE CACHE</button><p id="roomEditorStatus" role="status">Modifications non enregistrées</p><p>H : activer / quitter la caméra<br>ZQSD : se déplacer<br>A / E : descendre / monter<br>Souris : regarder autour<br>R : enregistrer la caméra</p>`;
+    panel.innerHTML = `<div class="room-editor-title">ÉDITION LIBRE</div><button type="button" id="roomEditorClose">QUITTER</button><label>Objet<select id="editor-object"></select></label><div class="editor-fields"><label>X<input id="editor-x" type="number" step="0.05"></label><label>Y<input id="editor-y" type="number" step="0.05"></label><label>Z<input id="editor-z" type="number" step="0.05"></label></div><label>Rotation Y<input id="editor-rotation" type="number" step="1"></label><label>Grossissement<input id="editor-scale" type="number" step="0.05" min="0.1" max="10"></label><label>Caméra<select id="editor-camera-position"></select></label><button type="button" id="roomEditorSave">VALIDER</button><button type="button" id="roomEditorClearCache">VIDER LE CACHE</button><p id="roomEditorStatus" role="status">Modifications non enregistrées</p><p>H : activer / quitter la caméra<br>ZQSD : se déplacer<br>A / E : descendre / monter<br>Souris : regarder autour<br>R : enregistrer la caméra</p>`;
     container.parentElement.appendChild(panel);
     const select = panel.querySelector("#editor-object");
     select.addEventListener("change", () => selectEditorObject(select.value));
@@ -1124,6 +1186,13 @@ export function createRoomScene(container, projects = []) {
     panel.querySelector("#editor-rotation").addEventListener("input", (event) => {
       if (editor.selected) {
         editor.selected.object.rotation.y = THREE.MathUtils.degToRad(Number(event.target.value) || 0);
+        saveEditorPositions();
+      }
+    });
+    panel.querySelector("#editor-scale").addEventListener("input", (event) => {
+      if (editor.selected) {
+        const nextScale = THREE.MathUtils.clamp(Number(event.target.value) || 1, 0.1, 10);
+        editor.selected.object.scale.setScalar(nextScale);
         saveEditorPositions();
       }
     });
@@ -1307,6 +1376,7 @@ export function createRoomScene(container, projects = []) {
     editor.pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
     editor.pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
     editor.raycaster.setFromCamera(editor.pointer, camera);
+    editor.floor.constant = -editor.selected.object.position.y;
     if (!editor.raycaster.ray.intersectPlane(editor.floor, editor.dragStartPoint)) return;
     editor.objectStartPosition.copy(editor.selected.object.position);
     editor.dragging = true;
@@ -1327,11 +1397,13 @@ export function createRoomScene(container, projects = []) {
     editor.pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
     editor.pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
     editor.raycaster.setFromCamera(editor.pointer, camera);
+    editor.floor.constant = -editor.objectStartPosition.y;
     if (editor.raycaster.ray.intersectPlane(editor.floor, editor.hitPoint)) {
-      const startInLocal = getLocalPointFromWorld(editor.selected.object, editor.dragStartPoint);
-      const hitInLocal = getLocalPointFromWorld(editor.selected.object, editor.hitPoint);
-      editor.selected.object.position.x = editor.objectStartPosition.x + (hitInLocal.x - startInLocal.x);
-      editor.selected.object.position.z = editor.objectStartPosition.z + (hitInLocal.z - startInLocal.z);
+      const dragDeltaX = editor.hitPoint.x - editor.dragStartPoint.x;
+      const dragDeltaZ = editor.hitPoint.z - editor.dragStartPoint.z;
+      editor.selected.object.position.x = editor.objectStartPosition.x + dragDeltaX;
+      editor.selected.object.position.z = editor.objectStartPosition.z + dragDeltaZ;
+      editor.selected.object.position.y = editor.objectStartPosition.y;
       syncEditorFields();
       saveEditorPositions();
     }
