@@ -1,0 +1,226 @@
+{
+  "layoutVersion": 2,
+  "television": {
+    "position": {
+      "x": 8.2,
+      "y": 0.9,
+      "z": -5.15
+    },
+    "rotationY": 165
+  },
+  "cup": {
+    "position": {
+      "x": -6.6,
+      "y": 2.15,
+      "z": -1.25
+    },
+    "rotationY": 60
+  },
+  "cassette-1": {
+    "position": {
+      "x": 9.05,
+      "y": 0.24,
+      "z": -3.9
+    },
+    "rotationY": -4.6
+  },
+  "cassette-2": {
+    "position": {
+      "x": 9.112,
+      "y": 0.36,
+      "z": -3.979
+    },
+    "rotationY": 6.9
+  },
+  "cassette-3": {
+    "position": {
+      "x": 9.021,
+      "y": 0.48,
+      "z": -4.126
+    },
+    "rotationY": -2.9
+  },
+  "kitchen": {
+    "position": {
+      "x": -6.5,
+      "y": 0.9,
+      "z": 7.2
+    },
+    "rotationY": 0
+  },
+  "dining-table": {
+    "position": {
+      "x": -5.576,
+      "y": -0.1,
+      "z": -2.467
+    },
+    "rotationY": -60
+  },
+  "sofa": {
+    "position": {
+      "x": 5.075,
+      "y": 1.05,
+      "z": -0.279
+    },
+    "rotationY": 0
+  },
+  "tv-stand": {
+    "position": {
+      "x": 6,
+      "y": 0.72,
+      "z": -5.15
+    },
+    "rotationY": 0
+  },
+  "shelf": {
+    "position": {
+      "x": 10.75,
+      "y": -0.15,
+      "z": -1
+    },
+    "rotationY": 0
+  },
+  "plant": {
+    "position": {
+      "x": 1.486,
+      "y": 0,
+      "z": -5
+    },
+    "rotationY": -15
+  },
+  "cameraPositions": [
+    {
+      "position": {
+        "x": -7.2,
+        "y": 5.6,
+        "z": 1.4
+      },
+      "rotation": {
+        "x": -0.18,
+        "y": 0.18
+      }
+    },
+    {
+      "position": {
+        "x": -2.5,
+        "y": 4.2,
+        "z": 2.8
+      },
+      "rotation": {
+        "x": -0.12,
+        "y": -0.65
+      }
+    },
+    {
+      "position": {
+        "x": -4.709,
+        "y": 2.924,
+        "z": 1.412
+      },
+      "rotation": {
+        "x": 0.078,
+        "y": 0.181
+      }
+    },
+    {
+      "position": {
+        "x": 0.08,
+        "y": 5.924,
+        "z": 4.175
+      },
+      "rotation": {
+        "x": -0.375,
+        "y": -0.779
+      }
+    },
+    {
+      "position": {
+        "x": 5.623,
+        "y": 1.428,
+        "z": -2.427
+      },
+      "rotation": {
+        "x": 0.012,
+        "y": -1.064
+      }
+    },
+    {
+      "position": {
+        "x": 4.629,
+        "y": 2.773,
+        "z": -1.799
+      },
+      "rotation": {
+        "x": 0.018,
+        "y": -1.976
+      }
+    },
+    {
+      "position": {
+        "x": 2.265,
+        "y": 2.85,
+        "z": 1.348
+      },
+      "rotation": {
+        "x": -0.252,
+        "y": 0.556
+      }
+    }
+  ],
+  "scratch-trophy": {
+    "position": {
+      "x": -0.148,
+      "y": 3.15,
+      "z": -0.593
+    },
+    "rotationY": 115
+  },
+  "python-trophy": {
+    "position": {
+      "x": 0.012,
+      "y": 3.15,
+      "z": 0.578
+    },
+    "rotationY": 71
+  },
+  "csharp-trophy": {
+    "position": {
+      "x": 0.121,
+      "y": 1.9,
+      "z": -0.217
+    },
+    "rotationY": 98
+  },
+  "html-trophy": {
+    "position": {
+      "x": 0.195,
+      "y": 1.9,
+      "z": 0.486
+    },
+    "rotationY": 64
+  },
+  "godot-trophy": {
+    "position": {
+      "x": -0.3,
+      "y": 1.9,
+      "z": -0.726
+    },
+    "rotationY": 113
+  },
+  "css-trophy": {
+    "position": {
+      "x": -0.103,
+      "y": 1.9,
+      "z": 0.938
+    },
+    "rotationY": 39
+  },
+  "laptop": {
+    "position": {
+      "x": -4.613,
+      "y": 2.15,
+      "z": -2.406
+    },
+    "rotationY": -198
+  }
+}
