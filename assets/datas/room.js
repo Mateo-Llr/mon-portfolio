@@ -46,18 +46,62 @@ function furnitureGroup(scene, id, label) {
 }
 
 function addDynamicSky(scene) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1024;
-  canvas.height = 512;
-  const context = canvas.getContext("2d");
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(48, 32, 16), new THREE.MeshBasicMaterial({ map: texture, side: THREE.BackSide, depthWrite: false }));
-  dome.name = "dynamic-sky";
-  scene.add(dome);
+  const skyboxCube = new THREE.CubeTexture([]);
+  skyboxCube.colorSpace = THREE.SRGBColorSpace;
+  scene.background = skyboxCube;
+  scene.environment = skyboxCube;
+
   const sun = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 8), new THREE.MeshBasicMaterial({ color: 0xffd47a }));
   const moon = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 8), new THREE.MeshBasicMaterial({ color: 0xd9e7ff }));
   scene.add(sun, moon);
+
+  const skyboxFaces = [];
+
+  function buildSkyboxFromCrossTexture(image) {
+    if (!image) return [];
+    const faceWidth = image.width / 4;
+    const faceHeight = image.height / 3;
+    const layout = [
+      { key: "px", sx: 2, sy: 1 },
+      { key: "nx", sx: 0, sy: 1 },
+      { key: "py", sx: 1, sy: 0 },
+      { key: "ny", sx: 1, sy: 2 },
+      { key: "pz", sx: 1, sy: 1 },
+      { key: "nz", sx: 3, sy: 1 }
+    ];
+
+    const generatedFaces = layout.map(({ sx, sy }) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.floor(faceWidth));
+      canvas.height = Math.max(1, Math.floor(faceHeight));
+      const context = canvas.getContext("2d");
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, sx * faceWidth, sy * faceHeight, faceWidth, faceHeight, 0, 0, canvas.width, canvas.height);
+      return canvas;
+    });
+
+    return generatedFaces;
+  }
+
+  function applySkyboxTint(daylight) {
+    if (!skyboxFaces.length) return;
+
+    const nightTint = new THREE.Color(0x071426);
+    const dayTint = new THREE.Color(0xeaf6ff);
+    const baseTint = new THREE.Color().lerpColors(nightTint, dayTint, daylight);
+
+    skyboxFaces.forEach((canvas) => {
+      const context = canvas.getContext("2d");
+      context.save();
+      context.globalCompositeOperation = "multiply";
+      context.fillStyle = `rgb(${Math.round(baseTint.r * 255)}, ${Math.round(baseTint.g * 255)}, ${Math.round(baseTint.b * 255)})`;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.restore();
+    });
+
+    skyboxCube.images = skyboxFaces;
+    skyboxCube.needsUpdate = true;
+  }
 
   function updateSky() {
     const date = new Date();
@@ -65,28 +109,29 @@ function addDynamicSky(scene) {
     const sunrise = 6.5;
     const sunset = 20.5;
     const daylight = THREE.MathUtils.clamp(Math.sin(((hour - sunrise) / (sunset - sunrise)) * Math.PI), 0, 1);
-    const topColor = new THREE.Color().lerpColors(new THREE.Color(0x071225), new THREE.Color(0x4cafd0), daylight);
-    const horizonColor = new THREE.Color().lerpColors(new THREE.Color(0x321d38), new THREE.Color(0xf3bd73), daylight);
-    const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, `#${topColor.getHexString()}`);
-    gradient.addColorStop(1, `#${horizonColor.getHexString()}`);
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.globalAlpha = (1 - daylight) * 0.42;
-    context.fillStyle = "#ffffff";
-    for (let index = 0; index < 70; index += 1) {
-      const x = (index * 137) % canvas.width;
-      const y = (index * 73) % (canvas.height * 0.62);
-      context.fillRect(x, y, 2, 2);
+
+    if (skyboxFaces.length) {
+      applySkyboxTint(daylight);
     }
-    context.globalAlpha = 1;
-    texture.needsUpdate = true;
+
     const angle = ((hour - sunrise) / (sunset - sunrise)) * Math.PI;
     sun.position.set(Math.cos(angle) * 22, Math.sin(angle) * 16 + 10, -18);
     moon.position.set(-Math.cos(angle) * 20, -Math.sin(angle) * 14 + 12, -20);
     sun.visible = daylight > 0.08;
     moon.visible = daylight < 0.72;
   }
+
+  new THREE.TextureLoader().load("assets/textures/skybox.png", (texture) => {
+    const expandedFaces = buildSkyboxFromCrossTexture(texture.image);
+    if (!expandedFaces.length) return;
+    skyboxFaces.length = 0;
+    skyboxFaces.push(...expandedFaces);
+    skyboxCube.images = skyboxFaces;
+    skyboxCube.needsUpdate = true;
+    scene.background = skyboxCube;
+    scene.environment = skyboxCube;
+    updateSky();
+  });
 
   updateSky();
   window.setInterval(updateSky, 60000);
@@ -259,6 +304,7 @@ function addShelf(scene, shelves, x, y, z) {
 export function createRoomScene(container, projects = []) {
   const POSITION_STORAGE_KEY = "mateo-portfolio-room-positions";
   const CAMERA_STORAGE_KEY = "mateo-portfolio-camera-positions";
+  const CAMERA_FILE_PATH = "assets/datas/camera.json";
   const ROOM_LAYOUT_VERSION = 2;
   let configuredPositions = {};
   let configuredCameraPositions = [];
@@ -489,7 +535,7 @@ export function createRoomScene(container, projects = []) {
   scene.add(box(10, 0.55, 0.25, wall, [4.8, 8.725, -6.2]));
   scene.add(box(23, 0.18, 0.4, trim, [0, 0.03, -5.98]));
   scene.add(box(23, 0.14, 0.3, trim, [0, 8.6, -5.92]));
-  const ceilingLight = new THREE.PointLight(0xffd6a0, 13, 17, 1.6);
+  const ceilingLight = new THREE.PointLight(0xffd6a0, 18, 17, 1.6);
   ceilingLight.position.set(0, 8.05, 0.4);
   ceilingLight.castShadow = !qualityProfile.lowPower;
   if (!qualityProfile.lowPower) {
@@ -587,8 +633,8 @@ export function createRoomScene(container, projects = []) {
   }
 
   const windowLights = [
-    { position: [-5.7, 5.1, -5.25], intensity: 0.32, target: [-5.7, 1.5, 0.5] },
-    { position: [4.8, 4.25, -5.25], intensity: 0.46, target: [4.8, 1.5, 0.5] }
+    { position: [-5.7, 5.1, -5.25], intensity: 0.56, target: [-5.7, 1.5, 0.5] },
+    { position: [4.8, 4.25, -5.25], intensity: 0.78, target: [4.8, 1.5, 0.5] }
   ].map(({ position, intensity }) => {
     const light = new THREE.SpotLight(0xffe8c2, intensity, 22, 0.62, 0.35, 1.4);
     light.position.set(...position);
@@ -606,7 +652,7 @@ export function createRoomScene(container, projects = []) {
     scene.add(light.target);
     return light;
   });
-  const ambientLight = new THREE.HemisphereLight(0xb8d4cc, 0x302d28, 1.3);
+  const ambientLight = new THREE.HemisphereLight(0xb8d4cc, 0x302d28, 1.9);
   scene.add(ambientLight);
 
   const screenCanvas = document.createElement("canvas");
@@ -621,7 +667,6 @@ export function createRoomScene(container, projects = []) {
   let roomTelevisionFeaturesLoaded = false;
   let roomCup = null;
   let roomLaptop = null;
-  let roomWallPhone = null;
   let roomLaptopHandler = null;
   let televisionGlow = null;
   let roomScreenMaterial = null;
@@ -874,28 +919,39 @@ export function createRoomScene(container, projects = []) {
     }
   }
 
+  function getStoredCameraPositions() {
+    try {
+      const value = localStorage.getItem(CAMERA_STORAGE_KEY);
+      if (!value) return null;
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function loadConfiguredPositions() {
     const storedPositions = getStoredPositions();
-    const storedCameraPositions = localStorage.getItem(CAMERA_STORAGE_KEY);
+    const storedLayoutVersion = Number(storedPositions?.layoutVersion ?? 0);
     let jsonConfiguration = null;
+    let jsonCameraConfiguration = null;
     try {
       const response = await fetch("assets/datas/positions.json");
       if (response.ok) jsonConfiguration = await response.json();
     } catch { jsonConfiguration = null; }
+    try {
+      const response = await fetch(CAMERA_FILE_PATH);
+      if (response.ok) jsonCameraConfiguration = await response.json();
+    } catch { jsonCameraConfiguration = null; }
     configuredPositions = jsonConfiguration || storedPositions || {};
-    configuredCameraPositions = configuredPositions.cameraPositions || [];
-    if (!storedCameraPositions && !configuredCameraPositions.length) {
-      configuredCameraPositions = configuredPositions.cameraPositions || [];
-      if (!configuredCameraPositions.length) {
-        try {
-          const response = await fetch("assets/datas/positions.json");
-          if (response.ok) configuredCameraPositions = (await response.json()).cameraPositions || [];
-        } catch { configuredCameraPositions = []; }
-      }
-    }
-    if (storedCameraPositions) {
-      try { configuredCameraPositions = JSON.parse(storedCameraPositions); } catch { configuredCameraPositions = []; }
-    }
+    configuredCameraPositions = Array.isArray(jsonCameraConfiguration?.cameraPositions)
+      ? jsonCameraConfiguration.cameraPositions
+      : Array.isArray(jsonConfiguration?.cameraPositions)
+        ? jsonConfiguration.cameraPositions
+        : Array.isArray(storedPositions?.cameraPositions)
+          ? storedPositions.cameraPositions
+          : [];
+    localStorage.removeItem(CAMERA_STORAGE_KEY);
     configuredPositions.layoutVersion = ROOM_LAYOUT_VERSION;
     configuredPositions.cameraPositions = configuredCameraPositions;
     const storedTelevisionPosition = configuredPositions.television?.position;
@@ -956,14 +1012,27 @@ export function createRoomScene(container, projects = []) {
     }
   }
 
+  async function persistCameraPositions() {
+    try {
+      const response = await fetch(CAMERA_FILE_PATH, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cameraPositions: configuredCameraPositions }, null, 2)
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      localStorage.removeItem(CAMERA_STORAGE_KEY);
+    } catch (error) {
+      console.error("Impossible d'enregistrer camera.json.", error);
+    }
+  }
+
   function saveCameraPosition() {
     configuredCameraPositions.push({
       position: { x: Number(camera.position.x.toFixed(3)), y: Number(camera.position.y.toFixed(3)), z: Number(camera.position.z.toFixed(3)) },
       rotation: { x: Number(editor.pitch.toFixed(4)), y: Number(editor.yaw.toFixed(4)) }
     });
     configuredPositions.cameraPositions = configuredCameraPositions;
-    const serializedCameraPositions = JSON.stringify(configuredCameraPositions);
-    localStorage.setItem(CAMERA_STORAGE_KEY, serializedCameraPositions);
+    persistCameraPositions();
     localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(configuredPositions));
     refreshCameraPositionSelect();
     const select = document.querySelector("#editor-camera-position");
@@ -1120,15 +1189,15 @@ export function createRoomScene(container, projects = []) {
     if (shouldUpdateWindowLighting) {
       windowLights.forEach((light, index) => {
         light.color.copy(windowColor);
-        light.intensity = windowEnergy * (index === 0 ? 0.42 : 0.58) * (qualityProfile.lowPower ? 0.7 : 1);
+        light.intensity = windowEnergy * (index === 0 ? 0.72 : 0.96) * (qualityProfile.lowPower ? 0.7 : 1);
       });
       ambientSkyColor.lerpColors(nightAmbientColor, dayAmbientColor, daylight);
       ambientGroundColor.lerpColors(nightGroundColor, dayGroundColor, daylight);
       ambientLight.color.copy(ambientSkyColor);
       ambientLight.groundColor.copy(ambientGroundColor);
-      ambientLight.intensity = (0.48 + daylight * 0.92) * (qualityProfile.lowPower ? 0.8 : 1);
+      ambientLight.intensity = (0.9 + daylight * 1.2) * (qualityProfile.lowPower ? 0.8 : 1);
     }
-    ceilingLight.intensity = 10 + (1 - daylight) * 12;
+    ceilingLight.intensity = 16 + (1 - daylight) * 15;
 
     if (televisionGlow) {
       const flicker = 0.96 + Math.sin(time * 0.028) * 0.025 + Math.sin(time * 0.11) * 0.012;
@@ -1186,29 +1255,106 @@ export function createRoomScene(container, projects = []) {
     material.customProgramCacheKey = () => "room-television-action-highlight-v1";
   }
 
-  function createStickyNote({ title, lines = [], color = "#f6e27a", textColor = "#2c2415", width = 0.46, height = 0.46, interactionType = null, actionUrl = null } = {}) {
+  function createStickyNote({ title, lines = [], color = "#f6e27a", textColor = "#2c2415", width = 0.46, height = 0.46, interactionType = null, actionUrl = null, iconPath = null } = {}) {
     const canvasSize = 256;
     const canvas = document.createElement("canvas");
     canvas.width = canvasSize;
     canvas.height = canvasSize;
     const context = canvas.getContext("2d");
 
-    context.fillStyle = color;
-    context.fillRect(0, 0, canvasSize, canvasSize);
-    context.strokeStyle = "rgba(0, 0, 0, 0.1)";
-    context.lineWidth = 5;
-    context.strokeRect(2.5, 2.5, canvasSize - 5, canvasSize - 5);
+    const safeWidth = canvasSize * 0.78;
+    const wrapText = (text, maxWidth) => {
+      if (!text) return [];
+      const words = `${text}`.trim().split(/\s+/);
+      if (!words.length) return [];
+      const wrapped = [];
+      let current = words[0];
 
-    context.fillStyle = textColor;
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.font = "700 44px 'Space Grotesk', sans-serif";
-    context.fillText(title, canvasSize / 2, 72);
+      for (let index = 1; index < words.length; index += 1) {
+        const candidate = `${current} ${words[index]}`;
+        if (context.measureText(candidate).width <= maxWidth) {
+          current = candidate;
+        } else {
+          wrapped.push(current);
+          current = words[index];
+        }
+      }
+      wrapped.push(current);
+      return wrapped;
+    };
 
-    context.font = "500 30px 'DM Mono', monospace";
-    lines.forEach((line, index) => {
-      context.fillText(line, canvasSize / 2, 138 + index * 42);
-    });
+    const fitText = (text, minSize, maxSize, maxWidth) => {
+      let size = maxSize;
+      while (size >= minSize) {
+        context.font = `700 ${size}px 'Space Grotesk', sans-serif`;
+        if (context.measureText(text).width <= maxWidth) return size;
+        size -= 2;
+      }
+      return minSize;
+    };
+
+    const fitBodyText = (text, maxWidth) => {
+      let size = 28;
+      while (size >= 18) {
+        context.font = `500 ${size}px 'DM Mono', monospace`;
+        const wrapped = wrapText(text, maxWidth);
+        let totalWidth = 0;
+        wrapped.forEach((segment) => {
+          totalWidth = Math.max(totalWidth, context.measureText(segment).width);
+        });
+        if (totalWidth <= maxWidth) return { size, lines: wrapped };
+        size -= 2;
+      }
+      return { size: 18, lines: wrapText(text, maxWidth).slice(0, 2) };
+    };
+
+    const paintNote = () => {
+      context.clearRect(0, 0, canvasSize, canvasSize);
+      context.fillStyle = color;
+      context.fillRect(0, 0, canvasSize, canvasSize);
+      context.strokeStyle = "rgba(0, 0, 0, 0.1)";
+      context.lineWidth = 5;
+      context.strokeRect(2.5, 2.5, canvasSize - 5, canvasSize - 5);
+
+      context.fillStyle = textColor;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+
+      const titleSize = fitText(title, 22, 48, safeWidth);
+      context.font = `700 ${titleSize}px 'Space Grotesk', sans-serif`;
+      context.lineWidth = Math.max(3, titleSize * 0.12);
+      context.strokeStyle = "#000000";
+      context.fillStyle = "#ffffff";
+      context.strokeText(title, canvasSize / 2, 86);
+      context.fillText(title, canvasSize / 2, 86);
+
+      const bodyLines = lines.flatMap((line) => fitBodyText(line, safeWidth).lines);
+      const bodyFontSize = Math.min(28, Math.max(18, Math.round((34 - Math.max(0, bodyLines.length - 2) * 4))));
+      context.font = `500 ${bodyFontSize}px 'DM Mono', monospace`;
+      context.fillStyle = "#000000";
+      context.lineWidth = 0;
+
+      bodyLines.forEach((line, index) => {
+        const y = 120 + index * 32;
+        context.fillText(line, canvasSize / 2, y);
+      });
+
+      if (iconPath) {
+        const icon = new Image();
+        icon.onload = () => {
+          const iconSize = 34;
+          const padding = 16;
+          context.save();
+          context.globalAlpha = 0.98;
+          context.drawImage(icon, canvasSize - iconSize - padding, padding, iconSize, iconSize);
+          context.restore();
+          texture.needsUpdate = true;
+        };
+        icon.src = iconPath;
+      }
+    };
+
+    paintNote();
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -1246,10 +1392,10 @@ export function createRoomScene(container, projects = []) {
 
     const cork = new THREE.Mesh(
       new THREE.PlaneGeometry(1.92, 1.28),
-      new THREE.MeshStandardMaterial({ map: boardTexture, roughness: 0.95, metalness: 0.04 })
+      new THREE.MeshStandardMaterial({ map: boardTexture, roughness: 0.95, metalness: 0.04, side: THREE.DoubleSide })
     );
     cork.position.set(9.75, 4.15, -5.7);
-    cork.rotation.y = Math.PI;
+    cork.rotation.y = 0;
     boardGroup.add(cork);
 
     const pin = new THREE.Mesh(
@@ -1267,14 +1413,14 @@ export function createRoomScene(container, projects = []) {
     const pinGeometry = new THREE.CylinderGeometry(0.032, 0.032, 0.06, 10);
     const pinMaterial = material(0x8e7d66, 0.35);
     const stickyNotes = [
-      { title: "CONTACT", lines: ["mateoleuillier", "@outlook.fr"], color: "#f7dd66", x: 9.32, y: 4.48, z: -5.665, rotationZ: -0.07, interactionType: "mailto", actionUrl: "mailto:mateoleuillier@outlook.fr" },
-      { title: "VS CODE", lines: ["Éditeur de code", "principal"], color: "#7fb8e0", x: 10.2, y: 4.44, z: -5.665, rotationZ: 0.05 },
-      { title: "GITHUB", lines: ["Versionning &", "hébergement du code"], color: "#f2a65a", x: 9.3, y: 3.85, z: -5.665, rotationZ: 0.08 },
-      { title: "BLOCKBENCH", lines: ["Modélisation 3D", "des objets de la pièce"], color: "#8fbf8a", x: 10.22, y: 3.82, z: -5.665, rotationZ: -0.05 },
-      { title: "Retour", lines: [], color: "#d9534f", textColor: "#ffffff", x: 10.62, y: 3.18, z: -5.665, rotationZ: 0.12, interactionType: "return" }
+      { title: "CONTACT", lines: ["mateoleuillier", "@outlook.fr"], color: "#f7dd66", x: 9.32, y: 4.48, z: -5.665, rotationZ: -0.07, interactionType: "mailto", actionUrl: "mailto:mateoleuillier@outlook.fr", iconPath: "assets/textures/icons/contact.png" },
+      { title: "VS CODE", lines: ["Éditeur de code", "principal"], color: "#7fb8e0", x: 10.2, y: 4.44, z: -5.665, rotationZ: 0.05, iconPath: "assets/textures/icons/vscode.png" },
+      { title: "GITHUB", lines: ["Versionning &", "hébergement du code"], color: "#f2a65a", x: 9.3, y: 3.85, z: -5.665, rotationZ: 0.08, iconPath: "assets/textures/icons/github.png" },
+      { title: "BLOCKBENCH", lines: ["Modélisation 3D", "des objets de la pièce"], color: "#8fbf8a", x: 10.22, y: 3.82, z: -5.665, rotationZ: -0.05, iconPath: "assets/textures/icons/blockbench.png" },
+      { title: "Retour", lines: [], color: "#d9534f", textColor: "#ffffff", x: 10.62, y: 3.18, z: -5.665, rotationZ: 0.12, interactionType: "return", iconPath: "assets/textures/icons/case.png" }
     ];
-    stickyNotes.forEach(({ title, lines, color, textColor, x, y, z, rotationZ, interactionType, actionUrl }) => {
-      const note = createStickyNote({ title, lines, color, textColor, interactionType, actionUrl });
+    stickyNotes.forEach(({ title, lines, color, textColor, x, y, z, rotationZ, interactionType, actionUrl, iconPath }) => {
+      const note = createStickyNote({ title, lines, color, textColor, interactionType, actionUrl, iconPath });
       note.position.set(x, y, z);
       note.rotation.z = rotationZ;
       boardGroup.add(note);
@@ -1524,36 +1670,6 @@ export function createRoomScene(container, projects = []) {
       });
     }, (error) => console.error("Impossible de charger le modèle laptop de la pièce.", error));
 
-    loadSharedModel("assets/models/vintage_phone.mtl", "assets/models/vintage_phone.obj").then((template) => {
-      const rawWallPhone = template.clone();
-      const model = centerModelPivot(rawWallPhone);
-      roomWallPhone = model;
-      roomWallPhone.name = "wall-phone";
-      roomWallPhone.position.set(-4.9, 3.15, -5.84);
-      roomWallPhone.rotation.y = Math.PI / 2;
-      roomWallPhone.scale.setScalar(1.05);
-      applyConfiguredPosition("wall-phone", roomWallPhone);
-      rawWallPhone.traverse((part) => {
-        if (!part.isMesh) return;
-        part.castShadow = true;
-        part.receiveShadow = true;
-        const materials = Array.isArray(part.material) ? part.material : [part.material];
-        materials.forEach((material) => {
-          if (!material.map) return;
-          material.map.magFilter = THREE.NearestFilter;
-          material.map.minFilter = THREE.NearestFilter;
-          material.map.anisotropy = 1;
-          material.map.needsUpdate = true;
-        });
-      });
-      roomWallPhone.visible = false;
-      scene.add(roomWallPhone);
-      prepareRoomModel(roomWallPhone).then(() => {
-        roomWallPhone.visible = true;
-        markShadowsDirty();
-      });
-    }, (error) => console.error("Impossible de charger le modèle vintage_phone de la pièce.", error));
-
   }
 
   function getEditorObjects() {
@@ -1562,7 +1678,6 @@ export function createRoomScene(container, projects = []) {
       { id: "television", label: "Télévision", object: roomTelevision },
       { id: "cup", label: "Tasse", object: roomCup },
       { id: "laptop", label: "Laptop", object: roomLaptop },
-      { id: "wall-phone", label: "Téléphone mural", object: roomWallPhone },
       { id: "cork-board", label: "Tableau en liège", object: scene.getObjectByName("cork-board") },
       { id: "scratch-trophy", label: "Trophée Scratch", object: scene.getObjectByName("scratch-trophy") },
       { id: "python-trophy", label: "Trophée Python", object: scene.getObjectByName("python-trophy") },

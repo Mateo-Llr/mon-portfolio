@@ -7,6 +7,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent
 POSITIONS_FILE = ROOT / "assets" / "datas" / "positions.json"
+CAMERA_FILE = ROOT / "assets" / "datas" / "camera.json"
 HOST = "::"
 PORT = 8000
 
@@ -18,7 +19,11 @@ class PortfolioServer(ThreadingHTTPServer):
 class PortfolioHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         normalized_path = self.path.split("?", 1)[0]
-        if normalized_path not in {"/positions.json", "/assets/datas/positions.json"}:
+        if normalized_path in {"/positions.json", "/assets/datas/positions.json"}:
+            save_target = POSITIONS_FILE
+        elif normalized_path in {"/camera.json", "/assets/datas/camera.json"}:
+            save_target = CAMERA_FILE
+        else:
             self.send_error(404, "Endpoint not found")
             return
 
@@ -26,12 +31,12 @@ class PortfolioHandler(SimpleHTTPRequestHandler):
             content_length = int(self.headers.get("Content-Length", "0"))
             data = json.loads(self.rfile.read(content_length))
             if not isinstance(data, dict):
-                raise ValueError("The positions payload must be an object")
+                raise ValueError("The payload must be an object")
             serialized = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
             with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=ROOT, delete=False) as temporary:
                 temporary.write(serialized)
                 temporary_path = Path(temporary.name)
-            os.replace(temporary_path, POSITIONS_FILE)
+            os.replace(temporary_path, save_target)
         except (ValueError, OSError, json.JSONDecodeError) as error:
             temporary_path = locals().get("temporary_path")
             if temporary_path:
