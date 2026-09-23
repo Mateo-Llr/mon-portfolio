@@ -142,6 +142,34 @@ function addWindow(scene, x, width, height, y = 5.25, z = -6.055, hasSill = true
   if (hasSill) scene.add(box(width + 0.7, 0.16, 0.45, frame, [x, y - height / 2 - 0.22, z + 0.3]));
 }
 
+function createPropLabel(title, options = {}) {
+  const { fontSize = 24, fontWeight = 600, strokeWidth = 0, width = 0.68, height = 0.09, canvasWidth = 512, canvasHeight = 64, textAlign = "center", textPadding = 0, backgroundColor = "#f4e8ca", textColor = "#111713", outlineColor = "#111713" } = options;
+  const labelCanvas = document.createElement("canvas");
+  labelCanvas.width = canvasWidth;
+  labelCanvas.height = canvasHeight;
+  const labelContext = labelCanvas.getContext("2d");
+  if (backgroundColor !== "transparent") {
+    labelContext.fillStyle = backgroundColor;
+    labelContext.fillRect(0, 0, labelCanvas.width, labelCanvas.height);
+  }
+  labelContext.fillStyle = textColor;
+  labelContext.font = `${fontWeight} ${fontSize}px 'Space Grotesk', sans-serif`;
+  labelContext.textAlign = textAlign;
+  labelContext.textBaseline = "middle";
+  const textX = textAlign === "left" ? textPadding : textAlign === "right" ? canvasWidth - textPadding : canvasWidth / 2;
+  if (strokeWidth > 0) {
+    labelContext.lineWidth = strokeWidth;
+    labelContext.strokeStyle = outlineColor;
+    labelContext.strokeText(title.replace("<br>", " "), textX, labelCanvas.height / 2);
+  }
+  labelContext.fillText(title.replace("<br>", " "), textX, labelCanvas.height / 2);
+  const labelTexture = new THREE.CanvasTexture(labelCanvas);
+  labelTexture.colorSpace = THREE.SRGBColorSpace;
+  labelTexture.minFilter = THREE.NearestFilter;
+  labelTexture.magFilter = THREE.NearestFilter;
+  return new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({ map: labelTexture, transparent: backgroundColor === "transparent" }));
+}
+
 function addShelf(scene, shelves, x, y, z) {
   const group = furnitureGroup(scene, "shelf", "Étagère");
   group.position.set(x, y, z);
@@ -166,6 +194,63 @@ function addShelf(scene, shelves, x, y, z) {
       });
     });
     group.add(model);
+
+    const shelfSkillsLabel = createPropLabel("MES COMPÉTENCES", {
+      fontSize: 120,
+      fontWeight: 700,
+      strokeWidth: 8,
+      width: 2.85,
+      height: 0.68,
+      canvasWidth: 1600,
+      canvasHeight: 260,
+      textColor: "#ffffff",
+      outlineColor: "#111713",
+      backgroundColor: "transparent"
+    });
+    shelfSkillsLabel.name = "shelf-skills-label";
+    shelfSkillsLabel.position.set(10.9, 4.95, -1.2);
+    shelfSkillsLabel.rotation.y = -Math.PI / 2;
+    shelfSkillsLabel.material.side = THREE.FrontSide;
+    shelfSkillsLabel.material.depthTest = true;
+    shelfSkillsLabel.material.depthWrite = true;
+    shelfSkillsLabel.renderOrder = 30;
+    scene.add(shelfSkillsLabel);
+
+    const shelfFocusZone = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.6, 1.15),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })
+    );
+    shelfFocusZone.name = "shelf-focus-zone";
+    shelfFocusZone.position.set(11.0, 4.7, -1.15);
+    shelfFocusZone.rotation.y = -Math.PI / 2;
+    shelfFocusZone.userData.interactionType = "camera";
+    shelfFocusZone.userData.cameraIndex = 5;
+    scene.add(shelfFocusZone);
+
+    const returnShelfButton = new THREE.Mesh(
+      new THREE.BoxGeometry(1.15, 0.52, 0.7),
+      new THREE.MeshStandardMaterial({ color: 0x2a1f1d, roughness: 0.78, metalness: 0.12 })
+    );
+    returnShelfButton.name = "shelf-return-button";
+    returnShelfButton.position.set(10.35, 1.1, -1.15);
+    returnShelfButton.rotation.y = -Math.PI / 2;
+    returnShelfButton.userData.interactionType = "return";
+    scene.add(returnShelfButton);
+
+    const returnShelfLabel = createPropLabel("RETOUR", {
+      fontSize: 62,
+      fontWeight: 700,
+      strokeWidth: 4,
+      width: 0.92,
+      height: 0.22,
+      canvasWidth: 500,
+      canvasHeight: 160,
+      textColor: "#ffffff",
+      outlineColor: "#111713",
+      backgroundColor: "transparent"
+    });
+    returnShelfLabel.position.set(0, 0.06, 0.38);
+    returnShelfButton.add(returnShelfLabel);
   }, (error) => console.error("Impossible de charger le modèle d'étagère.", error));
 
   return group;
@@ -485,7 +570,6 @@ export function createRoomScene(container, projects = []) {
   }, { timeout: 700 }));
 
   const contactCameraIndex = 9;
-  let contactTab = null;
 
   function matchesCameraPose(targetPose, candidatePose) {
     if (!targetPose || !candidatePose) return false;
@@ -496,32 +580,10 @@ export function createRoomScene(container, projects = []) {
     return positionDelta < 0.45 && rotationDelta < 0.45;
   }
 
-  function isOnCameraThreeView() {
-    const cameraThreePose = configuredCameraPositions[2] || presentationCameraPose || presentationCamera;
+  function isOnSkillsCameraView() {
+    const skillsPose = configuredCameraPositions[5] || presentationCameraPose || presentationCamera;
     const currentPose = { position: camera.position.clone(), rotation: { x: editor.pitch, y: editor.yaw } };
-    return matchesCameraPose(currentPose, cameraThreePose);
-  }
-
-  function syncContactTabState() {
-    if (!contactTab) return;
-    const visible = isOnCameraThreeView();
-    contactTab.hidden = !visible;
-    contactTab.setAttribute("aria-hidden", String(!visible));
-  }
-
-  function createContactTab() {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "contact-scene-tab";
-    button.textContent = "Contact";
-    button.hidden = true;
-    button.setAttribute("aria-label", "Afficher la vue de contact");
-    button.addEventListener("click", () => {
-      const target = configuredCameraPositions[contactCameraIndex] || configuredCameraPositions[configuredCameraPositions.length - 1] || presentationCamera;
-      if (target) focusOnCameraIndex(contactCameraIndex);
-    });
-    container.parentElement.appendChild(button);
-    return button;
+    return matchesCameraPose(currentPose, skillsPose);
   }
 
   const windowLights = [
@@ -851,10 +913,26 @@ export function createRoomScene(container, projects = []) {
     if (projectsFocusRequested) focusOnProjects();
   }
 
+  function getCameraPositionLabel(index) {
+    const customLabels = {
+      2: "Caméra 3 — Vue principale",
+      3: "Caméra 4 — Vue salon",
+      4: "Caméra 5 — Vue Projets",
+      5: "Caméra 6 — Vue Compétences",
+      9: "Caméra 10 — Vue Contact"
+    };
+    return customLabels[index] ?? null;
+  }
+
   function refreshCameraPositionSelect() {
     const select = document.querySelector("#editor-camera-position");
     if (!select) return;
-    select.innerHTML = `<option value="">Position enregistrée...</option>${configuredCameraPositions.map((_, index) => `<option value="${index}">Caméra ${index + 1}</option>`).join("")}`;
+    const visibleCameraIndexes = [2, 3, 4, 5, 9];
+    const options = visibleCameraIndexes
+      .filter((index) => configuredCameraPositions[index])
+      .map((index) => `<option value="${index}">${getCameraPositionLabel(index)}</option>`)
+      .join("");
+    select.innerHTML = `<option value="">Position enregistrée...</option>${options}`;
   }
 
   function applyCameraRotation() {
@@ -1108,34 +1186,6 @@ export function createRoomScene(container, projects = []) {
     material.customProgramCacheKey = () => "room-television-action-highlight-v1";
   }
 
-  function createPropLabel(title, options = {}) {
-    const { fontSize = 24, fontWeight = 600, strokeWidth = 0, width = 0.68, height = 0.09, canvasWidth = 512, canvasHeight = 64, textAlign = "center", textPadding = 0, backgroundColor = "#f4e8ca", textColor = "#111713", outlineColor = "#111713" } = options;
-    const labelCanvas = document.createElement("canvas");
-    labelCanvas.width = canvasWidth;
-    labelCanvas.height = canvasHeight;
-    const labelContext = labelCanvas.getContext("2d");
-    if (backgroundColor !== "transparent") {
-      labelContext.fillStyle = backgroundColor;
-      labelContext.fillRect(0, 0, labelCanvas.width, labelCanvas.height);
-    }
-    labelContext.fillStyle = textColor;
-    labelContext.font = `${fontWeight} ${fontSize}px 'Space Grotesk', sans-serif`;
-    labelContext.textAlign = textAlign;
-    labelContext.textBaseline = "middle";
-    const textX = textAlign === "left" ? textPadding : textAlign === "right" ? canvasWidth - textPadding : canvasWidth / 2;
-    if (strokeWidth > 0) {
-      labelContext.lineWidth = strokeWidth;
-      labelContext.strokeStyle = outlineColor;
-      labelContext.strokeText(title.replace("<br>", " "), textX, labelCanvas.height / 2);
-    }
-    labelContext.fillText(title.replace("<br>", " "), textX, labelCanvas.height / 2);
-    const labelTexture = new THREE.CanvasTexture(labelCanvas);
-    labelTexture.colorSpace = THREE.SRGBColorSpace;
-    labelTexture.minFilter = THREE.NearestFilter;
-    labelTexture.magFilter = THREE.NearestFilter;
-    return new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({ map: labelTexture, transparent: backgroundColor === "transparent" }));
-  }
-
   function createStickyNote({ title, lines = [], color = "#f6e27a", textColor = "#2c2415", width = 0.46, height = 0.46, interactionType = null, actionUrl = null } = {}) {
     const canvasSize = 256;
     const canvas = document.createElement("canvas");
@@ -1220,10 +1270,11 @@ export function createRoomScene(container, projects = []) {
       { title: "CONTACT", lines: ["mateoleuillier", "@outlook.fr"], color: "#f7dd66", x: 9.32, y: 4.48, z: -5.665, rotationZ: -0.07, interactionType: "mailto", actionUrl: "mailto:mateoleuillier@outlook.fr" },
       { title: "VS CODE", lines: ["Éditeur de code", "principal"], color: "#7fb8e0", x: 10.2, y: 4.44, z: -5.665, rotationZ: 0.05 },
       { title: "GITHUB", lines: ["Versionning &", "hébergement du code"], color: "#f2a65a", x: 9.3, y: 3.85, z: -5.665, rotationZ: 0.08 },
-      { title: "BLOCKBENCH", lines: ["Modélisation 3D", "des objets de la pièce"], color: "#8fbf8a", x: 10.22, y: 3.82, z: -5.665, rotationZ: -0.05 }
+      { title: "BLOCKBENCH", lines: ["Modélisation 3D", "des objets de la pièce"], color: "#8fbf8a", x: 10.22, y: 3.82, z: -5.665, rotationZ: -0.05 },
+      { title: "Retour", lines: [], color: "#d9534f", textColor: "#ffffff", x: 10.62, y: 3.18, z: -5.665, rotationZ: 0.12, interactionType: "return" }
     ];
-    stickyNotes.forEach(({ title, lines, color, x, y, z, rotationZ, interactionType, actionUrl }) => {
-      const note = createStickyNote({ title, lines, color, interactionType, actionUrl });
+    stickyNotes.forEach(({ title, lines, color, textColor, x, y, z, rotationZ, interactionType, actionUrl }) => {
+      const note = createStickyNote({ title, lines, color, textColor, interactionType, actionUrl });
       note.position.set(x, y, z);
       note.rotation.z = rotationZ;
       boardGroup.add(note);
@@ -1413,7 +1464,7 @@ export function createRoomScene(container, projects = []) {
           material.map.needsUpdate = true;
         });
       });
-      const cupLabel = createPropLabel("MES PROJETS", { fontSize: 48, fontWeight: 700, strokeWidth: 1.6, width: 0.4, height: 0.15, canvasHeight: 128 });
+      const cupLabel = createPropLabel("CONTACT", { fontSize: 48, fontWeight: 700, strokeWidth: 1.6, width: 0.4, height: 0.15, canvasHeight: 128 });
       cupLabel.position.set(0, 0.30, 0.2);
       rawCup.add(cupLabel);
       roomCup.visible = false;
@@ -1446,7 +1497,7 @@ export function createRoomScene(container, projects = []) {
           material.map.needsUpdate = true;
         });
       });
-      const laptopScreenLabel = createPropLabel("MES COMPÉTENCES", {
+      const laptopScreenLabel = createPropLabel("MES PROJETS", {
         fontSize: 52,
         fontWeight: 700,
         strokeWidth: 3,
@@ -1677,17 +1728,33 @@ export function createRoomScene(container, projects = []) {
     interactiveObjects.push(...shelfTrophies);
     const plantReturnLabel = scene.getObjectByName("plant-return-label");
     const projectsLabel = scene.getObjectByName("projects-label");
+    const shelfReturnButton = scene.getObjectByName("shelf-return-button");
     if (plantReturnLabel) interactiveObjects.push(plantReturnLabel);
     if (projectsLabel) interactiveObjects.push(projectsLabel);
+    if (shelfReturnButton) interactiveObjects.push(shelfReturnButton);
     const corkBoard = scene.getObjectByName("cork-board");
     if (corkBoard) interactiveObjects.push(corkBoard);
+    const shelfFocusZone = scene.getObjectByName("shelf-focus-zone");
+    if (shelfFocusZone) interactiveObjects.push(shelfFocusZone);
     const hits = editor.raycaster.intersectObjects(interactiveObjects, true);
     const hit = hits[0];
     if (hit) {
+      const isShelfActivationZone = hit.object.name === "shelf-focus-zone" || hit.object.name === "shelf-skills-label";
+      const isShelfObjectInteraction =
+        hit.object.name === "shelf-return-button"
+        || shelfTrophies.some((trophy) => trophy.getObjectById(hit.object.id));
+      if (isShelfObjectInteraction && !isOnSkillsCameraView()) return null;
       let hitObject = hit.object;
       while (hitObject) {
-        if (hitObject.name === "plant-return-label") return { type: "return" };
+        if (hitObject.name === "plant-return-label") return { type: "return-main" };
+        if (hitObject.name === "shelf-return-button") return { type: "return-salon" };
         if (hitObject.name === "projects-label") return { type: "projects" };
+        if (hitObject.name === "shelf-focus-zone" || hitObject.name === "shelf-skills-label") return { type: "camera", index: 5 };
+        if (hitObject.userData?.interactionType === "return") {
+          const targetIndex = Number(hitObject.userData.returnTargetCameraIndex ?? 0);
+          return targetIndex === 3 ? { type: "return-salon" } : { type: "return-main" };
+        }
+        if (hitObject.userData?.interactionType === "camera") return { type: "camera", index: Number(hitObject.userData.cameraIndex ?? 5) };
         if (hitObject.userData?.interactionType === "mailto") {
           return { type: "mailto", href: hitObject.userData.actionUrl || "mailto:mateoleuillier@outlook.fr" };
         }
@@ -1738,8 +1805,20 @@ export function createRoomScene(container, projects = []) {
     if (interaction.type === "television-action") roomTelevisionActionHandler?.(interaction.action);
     if (interaction.type === "cup") roomCupHandler?.();
     if (interaction.type === "laptop") roomLaptopHandler?.();
+    if (interaction.type === "return-main") {
+      focusOnInitialView();
+      return;
+    }
+    if (interaction.type === "return-salon") {
+      focusOnCameraIndex(3);
+      return;
+    }
     if (interaction.type === "return") roomReturnHandler?.();
     if (interaction.type === "projects") roomProjectsHandler?.();
+    if (interaction.type === "camera") {
+      focusOnCameraIndex(interaction.index);
+      return;
+    }
     if (interaction.type === "mailto") {
       window.location.href = interaction.href;
       return;
@@ -1780,7 +1859,6 @@ export function createRoomScene(container, projects = []) {
     }
     updateTrophyShowcaseTransition();
     updateTrophyShowcaseTilt();
-    syncContactTabState();
     composer.render();
     requestAnimationFrame(render);
   }
@@ -1833,7 +1911,6 @@ export function createRoomScene(container, projects = []) {
     showcaseDragState = null;
   });
   const editorPanel = createRoomEditor();
-  contactTab = createContactTab();
 
   function isCreatorAccount() {
     const creatorAliases = ["mateo", "mateoleuillier", "mateo leuillier", "1", "true"];

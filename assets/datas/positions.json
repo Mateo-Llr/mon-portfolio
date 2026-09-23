@@ -2,11 +2,11 @@
   "layoutVersion": 2,
   "television": {
     "position": {
-      "x": 7.856,
+      "x": 8.403,
       "y": 0.8,
-      "z": -4.594
+      "z": -4.813
     },
-    "rotationY": 165,
+    "rotationY": 153,
     "scale": 1.4
   },
   "cup": {

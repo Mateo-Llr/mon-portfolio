@@ -93,14 +93,14 @@ let insertedCassetteIndex = null;
 
 async function scheduleThreeSceneInitialization() {
   try {
-    const { createRoomScene } = await import("./assets/datas/room.js?v=contact-tab-corkboard-1");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=important-views-only-1");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(() => roomScene.focusOnProjects());
     roomScene.setTelevisionActionHandler(() => roomScene.focusOnProjects());
     roomScene.onProjectsFocusReached(() => roomScene.activateTelevisionFeatures());
     roomScene.setCassetteSelectHandler((index) => selectProject(index));
-    roomScene.setCupHandler(() => roomScene.focusOnProjects());
-    roomScene.setLaptopHandler(() => roomScene.focusOnCameraIndex(5));
+    roomScene.setCupHandler(() => roomScene.focusOnCameraIndex(9));
+    roomScene.setLaptopHandler(() => roomScene.focusOnCameraIndex(3));
     roomScene.setReturnHandler(() => roomScene.focusOnInitialView());
     roomScene.setProjectsHandler(() => roomScene.focusOnAchievements());
     roomScene.setTrophySelectHandler((id) => openTrophyPanel(id));
