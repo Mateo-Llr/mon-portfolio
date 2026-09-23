@@ -222,7 +222,7 @@ export function createRoomScene(container, projects = []) {
   // showcased trophy stay put in the foreground while the room camera is
   // otherwise free to keep doing its normal thing behind it.
   const trophyShowcaseAnchor = new THREE.Object3D();
-  trophyShowcaseAnchor.position.set(-0.9, -0.38, -2.8);
+  trophyShowcaseAnchor.position.set(-0.9, -0.42, -2.8);
   camera.add(trophyShowcaseAnchor);
   scene.add(camera);
   renderer.shadowMap.autoUpdate = false;
@@ -496,16 +496,15 @@ export function createRoomScene(container, projects = []) {
     return positionDelta < 0.45 && rotationDelta < 0.45;
   }
 
-  function isOnFirstCameraView() {
-    const firstCameraPose = configuredCameraPositions[0] || presentationCamera;
-    const initialCameraPose = presentationCameraPose || presentationCamera;
+  function isOnCameraThreeView() {
+    const cameraThreePose = configuredCameraPositions[2] || presentationCameraPose || presentationCamera;
     const currentPose = { position: camera.position.clone(), rotation: { x: editor.pitch, y: editor.yaw } };
-    return matchesCameraPose(currentPose, firstCameraPose) || matchesCameraPose(currentPose, initialCameraPose);
+    return matchesCameraPose(currentPose, cameraThreePose);
   }
 
   function syncContactTabState() {
     if (!contactTab) return;
-    const visible = isOnFirstCameraView();
+    const visible = isOnCameraThreeView();
     contactTab.hidden = !visible;
     contactTab.setAttribute("aria-hidden", String(!visible));
   }
@@ -620,7 +619,7 @@ export function createRoomScene(container, projects = []) {
       fromPosition,
       fromRotation,
       fromScale,
-      toPosition: new THREE.Vector3(0, -0.18, 0),
+      toPosition: new THREE.Vector3(0, -0.24, 0),
       toRotation: new THREE.Euler(0, SHOWCASE_BASE_ROTATION_Y, 0),
       toScale: new THREE.Vector3(SHOWCASE_FRONT_SCALE, SHOWCASE_FRONT_SCALE, SHOWCASE_FRONT_SCALE),
       closing: false
@@ -1137,6 +1136,50 @@ export function createRoomScene(container, projects = []) {
     return new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({ map: labelTexture, transparent: backgroundColor === "transparent" }));
   }
 
+  function createStickyNote({ title, lines = [], color = "#f6e27a", textColor = "#2c2415", width = 0.46, height = 0.46, interactionType = null, actionUrl = null } = {}) {
+    const canvasSize = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasSize;
+    canvas.height = canvasSize;
+    const context = canvas.getContext("2d");
+
+    context.fillStyle = color;
+    context.fillRect(0, 0, canvasSize, canvasSize);
+    context.strokeStyle = "rgba(0, 0, 0, 0.1)";
+    context.lineWidth = 5;
+    context.strokeRect(2.5, 2.5, canvasSize - 5, canvasSize - 5);
+
+    context.fillStyle = textColor;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.font = "700 44px 'Space Grotesk', sans-serif";
+    context.fillText(title, canvasSize / 2, 72);
+
+    context.font = "500 30px 'DM Mono', monospace";
+    lines.forEach((line, index) => {
+      context.fillText(line, canvasSize / 2, 138 + index * 42);
+    });
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
+
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, height),
+      new THREE.MeshStandardMaterial({ map: texture, roughness: 0.88, metalness: 0 })
+    );
+
+    if (interactionType) {
+      mesh.userData.interactionType = interactionType;
+    }
+    if (actionUrl) {
+      mesh.userData.actionUrl = actionUrl;
+    }
+
+    return mesh;
+  }
+
   function addCorkBoard(scene) {
     const boardTexture = loadSharedTexture("assets/textures/board.png");
     boardTexture.colorSpace = THREE.SRGBColorSpace;
@@ -1166,6 +1209,34 @@ export function createRoomScene(container, projects = []) {
     pin.position.set(9.75, 4.74, -5.66);
     pin.rotation.x = Math.PI / 2;
     boardGroup.add(pin);
+
+    // Post-its: contacts and the tools used to build the site, pinned to
+    // the cork board. Placed with the same absolute-style local coordinates
+    // as frame/cork/pin above, so the centerFurniturePivot() call below
+    // picks them up and re-centers them along with everything else.
+    const pinGeometry = new THREE.CylinderGeometry(0.032, 0.032, 0.06, 10);
+    const pinMaterial = material(0x8e7d66, 0.35);
+    const stickyNotes = [
+      { title: "CONTACT", lines: ["mateoleuillier", "@outlook.fr"], color: "#f7dd66", x: 9.32, y: 4.48, z: -5.665, rotationZ: -0.07, interactionType: "mailto", actionUrl: "mailto:mateoleuillier@outlook.fr" },
+      { title: "VS CODE", lines: ["Éditeur de code", "principal"], color: "#7fb8e0", x: 10.2, y: 4.44, z: -5.665, rotationZ: 0.05 },
+      { title: "GITHUB", lines: ["Versionning &", "hébergement du code"], color: "#f2a65a", x: 9.3, y: 3.85, z: -5.665, rotationZ: 0.08 },
+      { title: "BLOCKBENCH", lines: ["Modélisation 3D", "des objets de la pièce"], color: "#8fbf8a", x: 10.22, y: 3.82, z: -5.665, rotationZ: -0.05 }
+    ];
+    stickyNotes.forEach(({ title, lines, color, x, y, z, rotationZ, interactionType, actionUrl }) => {
+      const note = createStickyNote({ title, lines, color, interactionType, actionUrl });
+      note.position.set(x, y, z);
+      note.rotation.z = rotationZ;
+      boardGroup.add(note);
+
+      const stickyPin = new THREE.Mesh(pinGeometry, pinMaterial);
+      stickyPin.position.set(x, y + 0.17, z + 0.006);
+      stickyPin.rotation.x = Math.PI / 2;
+      if (interactionType) {
+        stickyPin.userData.interactionType = interactionType;
+        stickyPin.userData.actionUrl = actionUrl;
+      }
+      boardGroup.add(stickyPin);
+    });
 
     // Without this, boardGroup's own origin stays at world (0,0,0) while its
     // children sit ~9.75/4.15/-5.8 away from it - so scaling or rotating the
@@ -1608,6 +1679,8 @@ export function createRoomScene(container, projects = []) {
     const projectsLabel = scene.getObjectByName("projects-label");
     if (plantReturnLabel) interactiveObjects.push(plantReturnLabel);
     if (projectsLabel) interactiveObjects.push(projectsLabel);
+    const corkBoard = scene.getObjectByName("cork-board");
+    if (corkBoard) interactiveObjects.push(corkBoard);
     const hits = editor.raycaster.intersectObjects(interactiveObjects, true);
     const hit = hits[0];
     if (hit) {
@@ -1615,6 +1688,9 @@ export function createRoomScene(container, projects = []) {
       while (hitObject) {
         if (hitObject.name === "plant-return-label") return { type: "return" };
         if (hitObject.name === "projects-label") return { type: "projects" };
+        if (hitObject.userData?.interactionType === "mailto") {
+          return { type: "mailto", href: hitObject.userData.actionUrl || "mailto:mateoleuillier@outlook.fr" };
+        }
         hitObject = hitObject.parent;
       }
       const cassetteIndex = roomCassettes.findIndex((cassette) => cassette?.getObjectById(hit.object.id));
@@ -1664,6 +1740,10 @@ export function createRoomScene(container, projects = []) {
     if (interaction.type === "laptop") roomLaptopHandler?.();
     if (interaction.type === "return") roomReturnHandler?.();
     if (interaction.type === "projects") roomProjectsHandler?.();
+    if (interaction.type === "mailto") {
+      window.location.href = interaction.href;
+      return;
+    }
     if (interaction.type === "trophy") {
       focusOnTrophyShowcase(interaction.name);
       roomTrophySelectHandler?.(interaction.name);
