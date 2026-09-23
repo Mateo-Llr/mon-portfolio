@@ -9,6 +9,26 @@ function material(color, roughness = 0.72, metalness = 0) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness });
 }
 
+function wallpaperMaterial(width = 1, height = 1, direction = "x") {
+  const texture = loadSharedTexture("assets/textures/wallpaper.png", { colorSpace: THREE.SRGBColorSpace }).clone();
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.center.set(0.5, 0.5);
+
+  let repeatX = Math.max(width / 1.6, 0.25);
+  let repeatY = Math.max(height / 1.6, 0.25);
+
+  texture.rotation = 0;
+
+  texture.repeat.set(repeatX, repeatY);
+  return new THREE.MeshStandardMaterial({
+    map: texture,
+    color: 0xf0efd8,
+    roughness: 0.95,
+    metalness: 0
+  });
+}
+
 function box(width, height, depth, surface, position, rotation = [0, 0, 0]) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), surface);
   mesh.position.set(...position);
@@ -510,7 +530,7 @@ export function createRoomScene(container, projects = []) {
   kitchenFloorTexture.wrapS = THREE.RepeatWrapping;
   kitchenFloorTexture.wrapT = THREE.RepeatWrapping;
   kitchenFloorTexture.repeat.set(2.2, 2.2);
-  const wall = material(0x798174, 0.95);
+  const wall = (width = 1, height = 1, direction = "x") => wallpaperMaterial(width, height, direction);
   const trim = material(0x303b36, 0.78);
   const darkWood = material(0x44382d, 0.88);
   const tabletop = material(0x9a7954, 0.82);
@@ -529,12 +549,12 @@ export function createRoomScene(container, projects = []) {
 
   scene.add(box(23, 0.25, 17, floor, [0, -0.15, 1.5]));
   scene.add(box(9.8, 0.18, 5.5, kitchenFloor, [-7.2, -0.06, 7.5]));
-  scene.add(box(3.7, 9, 0.25, wall, [-9.65, 4.35, -6.2]));
-  scene.add(box(3.4, 9, 0.25, wall, [-1.9, 4.35, -6.2]));
-  scene.add(box(1.7, 9, 0.25, wall, [10.65, 4.35, -6.2]));
-  scene.add(box(4.2, 3.35, 0.25, wall, [-5.7, 1.675, -6.2]));
-  scene.add(box(4.2, 2.15, 0.25, wall, [-5.7, 7.925, -6.2]));
-  scene.add(box(10, 0.55, 0.25, wall, [4.8, 8.725, -6.2]));
+  scene.add(box(3.7, 9, 0.25, wall(3.7, 9, "x"), [-9.65, 4.35, -6.2]));
+  scene.add(box(3.4, 9, 0.25, wall(3.4, 9, "x"), [-1.9, 4.35, -6.2]));
+  scene.add(box(1.7, 9, 0.25, wall(1.7, 9, "x"), [10.65, 4.35, -6.2]));
+  scene.add(box(4.2, 3.35, 0.25, wall(4.2, 3.35, "x"), [-5.7, 1.675, -6.2]));
+  scene.add(box(4.2, 2.15, 0.25, wall(4.2, 2.15, "x"), [-5.7, 7.925, -6.2]));
+  scene.add(box(10, 0.55, 0.25, wall(10, 0.55, "x"), [4.8, 8.725, -6.2]));
   scene.add(box(23, 0.18, 0.4, trim, [0, 0.03, -5.98]));
   scene.add(box(23, 0.14, 0.3, trim, [0, 8.6, -5.92]));
   const ceilingLight = new THREE.PointLight(0xffd6a0, 18, 17, 1.6);
@@ -553,11 +573,11 @@ export function createRoomScene(container, projects = []) {
   addDiningTable(scene, tabletop, darkWood);
 
   requestAnimationFrame(() => onIdle(() => {
-    scene.add(box(0.25, 9, 17, wall, [-11.5, 4.35, 1.5]));
-    scene.add(box(0.25, 9, 5, wall, [-2.5, 4.35, 7.2]));
-    scene.add(box(0.25, 9, 12.8, wall, [11.5, 4.35, -0.2]));
-    scene.add(box(14, 9, 0.25, wall, [4.5, 4.35, 4.8]));
-    scene.add(box(9, 9, 0.25, wall, [-7, 4.35, 9.5]));
+    scene.add(box(0.25, 9, 17, wall(17, 9, "z"), [-11.5, 4.35, 1.5]));
+    scene.add(box(0.25, 9, 5, wall(5, 9, "z"), [-2.5, 4.35, 7.2]));
+    scene.add(box(0.25, 9, 12.8, wall(12.8, 9, "z"), [11.5, 4.35, -0.2]));
+    scene.add(box(14, 9, 0.25, wall(14, 9, "x"), [4.5, 4.35, 4.8]));
+    scene.add(box(9, 9, 0.25, wall(9, 9, "x"), [-7, 4.35, 9.5]));
     scene.add(box(23, 0.15, 0.25, trim, [0, 0.08, 8.9]));
     const ceiling = material(0x29322f, 0.96);
     scene.add(box(23, 0.22, 17, ceiling, [0, 8.85, 1.5]));
