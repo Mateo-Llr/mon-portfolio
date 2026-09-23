@@ -131,7 +131,7 @@ function handleTelevisionClick() {
 
 async function scheduleThreeSceneInitialization() {
   try {
-    const { createRoomScene } = await import("./assets/datas/room.js?v=hidden-cassette-hit-test-16");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=responsive-project-screen-17");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);

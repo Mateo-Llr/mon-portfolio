@@ -32,7 +32,7 @@ function drawBadge(context, text, x, y, color = "#4fc1bb") {
   return x + width + 8;
 }
 
-export function drawProjectScreen(canvas, project, index, isEjected = false) {
+export function drawProjectScreen(canvas, project, index, isEjected = false, requestedScale = 1) {
   const context = canvas.getContext("2d");
   context.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   context.save();
@@ -53,6 +53,11 @@ export function drawProjectScreen(canvas, project, index, isEjected = false) {
     context.lineTo(SCREEN_WIDTH, y);
     context.stroke();
   }
+
+  const layoutScale = Math.min(1, Math.max(0.72, requestedScale));
+  context.save();
+  context.translate((SCREEN_WIDTH - SCREEN_WIDTH * layoutScale) / 2, (SCREEN_HEIGHT - SCREEN_HEIGHT * layoutScale) / 2);
+  context.scale(layoutScale, layoutScale);
 
   if (isEjected) {
     context.fillStyle = "#b9e8dc";
@@ -110,6 +115,7 @@ export function drawProjectScreen(canvas, project, index, isEjected = false) {
     });
   }
 
+  context.restore();
   context.globalCompositeOperation = "screen";
   context.globalAlpha = 0.14;
   context.fillStyle = "#b8c39d";

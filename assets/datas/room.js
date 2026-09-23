@@ -763,6 +763,8 @@ export function createRoomScene(container, projects = []) {
   let roomBaseScreenMap = null;
   let roomBaseScreenUvs = null;
   let roomDynamicScreenUvs = null;
+  let activeRoomScreenProject = null;
+  let activeRoomScreenEjected = true;
   let televisionGlowBaseIntensity = 1.6;
   let roomCassetteSelectHandler = null;
   let roomTelevisionHandler = null;
@@ -1254,6 +1256,8 @@ export function createRoomScene(container, projects = []) {
   }
 
   function drawRoomScreen(project, isEjected = false) {
+    activeRoomScreenProject = project;
+    activeRoomScreenEjected = isEjected;
     const screenMesh = roomTelevision?.getObjectByName("screen");
     if (screenMesh && roomScreenMaterial && roomBaseScreenMap && roomBaseScreenUvs && roomDynamicScreenUvs) {
       screenMesh.geometry.setAttribute("uv", isEjected ? roomBaseScreenUvs : roomDynamicScreenUvs);
@@ -1263,7 +1267,8 @@ export function createRoomScene(container, projects = []) {
       roomScreenMaterial.needsUpdate = true;
     }
     if (isEjected) return;
-    drawProjectScreen(screenCanvas, project, Math.max(0, projects.indexOf(project)), isEjected);
+    const screenScale = Math.min(1, Math.max(0.72, Math.min(container.clientWidth / 960, container.clientHeight / 540)));
+    drawProjectScreen(screenCanvas, project, Math.max(0, projects.indexOf(project)), isEjected, screenScale);
     screenTexture.needsUpdate = true;
     televisionGlowBaseIntensity = isEjected ? 1.6 : 4.4;
     if (televisionGlow) televisionGlow.intensity = televisionGlowBaseIntensity;
@@ -1955,6 +1960,7 @@ export function createRoomScene(container, projects = []) {
     camera.updateProjectionMatrix();
     composer.setSize(container.clientWidth, container.clientHeight);
     outlinePass.resolution.set(container.clientWidth, container.clientHeight);
+    if (activeRoomScreenProject) drawRoomScreen(activeRoomScreenProject, activeRoomScreenEjected);
   }
   function onPointerMove(event) {
     pointer.x = (event.clientX / window.innerWidth - 0.5) * 2;
