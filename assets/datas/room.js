@@ -1523,14 +1523,14 @@ export function createRoomScene(container, projects = []) {
 
     const boardGroup = furnitureGroup(scene, "cork-board", "Tableau en liège");
     const frame = new THREE.Mesh(
-      new THREE.BoxGeometry(2.2, 1.6, 0.12),
+      new THREE.BoxGeometry(3.05, 1.85, 0.12),
       material(0x5c4b3e, 0.7)
     );
     frame.position.set(9.75, 4.15, -5.8);
     boardGroup.add(frame);
 
     const cork = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.92, 1.28),
+      new THREE.PlaneGeometry(2.77, 1.53),
       new THREE.MeshStandardMaterial({ map: boardTexture, roughness: 0.95, metalness: 0.04, side: THREE.DoubleSide })
     );
     cork.position.set(9.75, 4.15, -5.7);
@@ -1541,7 +1541,7 @@ export function createRoomScene(container, projects = []) {
       new THREE.CylinderGeometry(0.045, 0.045, 0.08, 12),
       material(0x8e7d66, 0.35)
     );
-    pin.position.set(9.75, 4.74, -5.66);
+    pin.position.set(9.75, 4.99, -5.66);
     pin.rotation.x = Math.PI / 2;
     boardGroup.add(pin);
 
@@ -1552,11 +1552,12 @@ export function createRoomScene(container, projects = []) {
     const pinGeometry = new THREE.CylinderGeometry(0.032, 0.032, 0.06, 10);
     const pinMaterial = material(0x8e7d66, 0.35);
     const stickyNotes = [
-      { title: "CONTACT", lines: ["mateoleuillier", "@outlook.fr"], color: "#f7dd66", x: 9.32, y: 4.48, z: -5.665, rotationZ: -0.07, interactionType: "mailto", actionUrl: "mailto:mateoleuillier@outlook.fr", iconPath: "assets/textures/icons/contact.png" },
-      { title: "VS CODE", lines: ["Éditeur de code", "principal"], color: "#7fb8e0", x: 10.2, y: 4.44, z: -5.665, rotationZ: 0.05, iconPath: "assets/textures/icons/vscode.png" },
-      { title: "GITHUB", lines: ["Versionning &", "hébergement du code"], color: "#f2a65a", x: 9.3, y: 3.85, z: -5.665, rotationZ: 0.08, iconPath: "assets/textures/icons/github.png" },
-      { title: "BLOCKBENCH", lines: ["Modélisation 3D", "des objets de la pièce"], color: "#8fbf8a", x: 10.22, y: 3.82, z: -5.665, rotationZ: -0.05, iconPath: "assets/textures/icons/blockbench.png" },
-      { title: "Retour", lines: [], color: "#d9534f", textColor: "#ffffff", x: 10.62, y: 3.18, z: -5.665, rotationZ: 0.12, interactionType: "return", iconPath: "assets/textures/icons/case.png" }
+      { title: "CONTACT", lines: ["mateoleuillier", "@outlook.fr"], color: "#f7dd66", x: 9.12, y: 4.54, z: -5.665, rotationZ: -0.07, interactionType: "mailto", actionUrl: "mailto:mateoleuillier@outlook.fr", iconPath: "assets/textures/icons/contact.png" },
+      { title: "VS CODE", lines: ["Éditeur de code", "principal"], color: "#7fb8e0", x: 9.75, y: 4.43, z: -5.665, rotationZ: 0.05, iconPath: "assets/textures/icons/vscode.png" },
+      { title: "GITHUB", lines: ["Versionning &", "hébergement du code"], color: "#f2a65a", x: 10.38, y: 4.5, z: -5.665, rotationZ: 0.08, iconPath: "assets/textures/icons/github.png" },
+      { title: "BLOCKBENCH", lines: ["Modélisation 3D", "des objets de la pièce"], color: "#8fbf8a", x: 9.12, y: 3.76, z: -5.665, rotationZ: -0.05, iconPath: "assets/textures/icons/blockbench.png" },
+      { title: "MENTIONS LÉGALES", lines: ["Portfolio", "personnel"], color: "#f2c6a0", x: 9.75, y: 3.86, z: -5.665, rotationZ: -0.08 },
+      { title: "Retour", lines: [], color: "#d9534f", textColor: "#ffffff", x: 10.38, y: 3.74, z: -5.665, rotationZ: 0.12, interactionType: "return", iconPath: "assets/textures/icons/case.png" }
     ];
     stickyNotes.forEach(({ title, lines, color, textColor, x, y, z, rotationZ, interactionType, actionUrl, iconPath }) => {
       const note = createStickyNote({ title, lines, color, textColor, interactionType, actionUrl, iconPath });
