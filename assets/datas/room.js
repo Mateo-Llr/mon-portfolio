@@ -235,8 +235,8 @@ function createPropLabel(title, options = {}) {
   return new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({ map: labelTexture, transparent: backgroundColor === "transparent" }));
 }
 
-function addShelf(scene, shelves, x, y, z) {
-  const group = furnitureGroup(scene, "shelf", "Étagère");
+function addShelf(scene, shelves, x, y, z, withInteractiveContent = true, objectId = "shelf") {
+  const group = furnitureGroup(scene, objectId, objectId === "shelf" ? "Étagère" : "Deuxième étagère");
   group.position.set(x, y, z);
 
   loadSharedModel("assets/models/furniture/shelf.mtl", "assets/models/furniture/shelf.obj").then((template) => {
@@ -259,6 +259,7 @@ function addShelf(scene, shelves, x, y, z) {
       });
     });
     group.add(model);
+    if (!withInteractiveContent) return;
 
     const shelfSkillsLabel = createPropLabel("MES COMPÉTENCES", {
       fontSize: 140,
@@ -273,7 +274,7 @@ function addShelf(scene, shelves, x, y, z) {
       backgroundColor: "transparent"
     });
     shelfSkillsLabel.name = "shelf-skills-label";
-    shelfSkillsLabel.position.set(10.8, 5.25, -1.45);
+    shelfSkillsLabel.position.set(0, 5.4, -0.25);
     shelfSkillsLabel.rotation.y = -Math.PI / 2;
     shelfSkillsLabel.material.side = THREE.FrontSide;
     shelfSkillsLabel.material.depthTest = true;
@@ -281,28 +282,28 @@ function addShelf(scene, shelves, x, y, z) {
     shelfSkillsLabel.renderOrder = 30;
     shelfSkillsLabel.userData.interactionType = "camera";
     shelfSkillsLabel.userData.cameraIndex = 5;
-    scene.add(shelfSkillsLabel);
+    group.add(shelfSkillsLabel);
 
     const shelfFocusZone = new THREE.Mesh(
       new THREE.BoxGeometry(3.8, 4.0, 0.32),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })
     );
     shelfFocusZone.name = "shelf-focus-zone";
-    shelfFocusZone.position.set(10.9, 4.05, -1.15);
+    shelfFocusZone.position.set(0.1, 4.2, -2.45);
     shelfFocusZone.rotation.y = -Math.PI / 2;
     shelfFocusZone.userData.interactionType = "camera";
     shelfFocusZone.userData.cameraIndex = 5;
-    scene.add(shelfFocusZone);
+    group.add(shelfFocusZone);
 
     const returnShelfButton = new THREE.Mesh(
       new THREE.BoxGeometry(1.15, 0.52, 0.7),
       new THREE.MeshStandardMaterial({ color: 0x2a1f1d, roughness: 0.78, metalness: 0.12 })
     );
     returnShelfButton.name = "shelf-return-button";
-    returnShelfButton.position.set(10.35, 1.1, -1.15);
+    returnShelfButton.position.set(-0.45, 1.25, 0.05);
     returnShelfButton.rotation.y = -Math.PI / 2;
     returnShelfButton.userData.interactionType = "return";
-    scene.add(returnShelfButton);
+    group.add(returnShelfButton);
 
     const returnShelfLabel = createPropLabel("RETOUR", {
       fontSize: 62,
@@ -502,6 +503,18 @@ export function createRoomScene(container, projects = []) {
     });
   }
 
+  function attachJavaScriptTrophy(shelfGroup) {
+    attachTrophy(shelfGroup, {
+      id: "javascript-trophy",
+      label: "JavaScript",
+      modelPath: "assets/models/trophies/trophy_javascript.mtl",
+      objPath: "assets/models/trophies/trophy_javascript.obj",
+      scale: 0.62,
+      position: [-4.9, 1.62, -0.08],
+      rotationY: -0.2
+    });
+  }
+
   function prepareRoomModel(model) {
     const cullingStates = [];
     model.traverse((part) => {
@@ -596,6 +609,7 @@ export function createRoomScene(container, projects = []) {
     addSofaL(scene, upholstery, darkWood);
     addCoffeeTable(scene, tabletop, darkWood);
     addShelf(scene, [[0xc05262, 0, 0.25], [0x9b4e39, 1, 0], [0xd29b48, 2, 0.1], [0x6f8f6d, 3, 0]], 9.8, 2.6, 5.2);
+    addShelf(scene, [], 9.8, 2.6, 2.2, false, "shelf-secondary");
     const shelf = scene.getObjectByName("shelf");
     attachScratchTrophy(shelf);
     attachPythonTrophy(shelf);
@@ -603,6 +617,7 @@ export function createRoomScene(container, projects = []) {
     attachHTMLTrophy(shelf);
     attachGodotTrophy(shelf);
     attachCSSTrophy(shelf);
+    attachJavaScriptTrophy(shelf);
     const tvStand = furnitureGroup(scene, "tv-stand", "Meuble TV");
     tvStand.add(box(5.8, 0.32, 0.9, darkWood, [6.0, 0.62, -5.15]));
     tvStand.add(box(5.6, 0.12, 0.95, tabletop, [6.0, 0.82, -5.15]));
@@ -1716,6 +1731,7 @@ export function createRoomScene(container, projects = []) {
       ["coffee-table", "Table basse"],
       ["tv-stand", "Meuble TV"],
       ["shelf", "Étagère"],
+      ["shelf-secondary", "Deuxième étagère"],
       ["plant", "Plante"]
     ].map(([id, label]) => ({ id, label, object: scene.getObjectByName(id) }));
     return [...props, ...furniture].filter((entry) => entry.object);

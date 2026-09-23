@@ -20,29 +20,29 @@
   },
   "cassette-1": {
     "position": {
-      "x": 9.05,
-      "y": 0.24,
-      "z": -3.9
+      "x": 8.903,
+      "y": 0,
+      "z": -4.085
     },
     "rotationY": -4.6,
     "scale": 0.96
   },
   "cassette-2": {
     "position": {
-      "x": 9.112,
-      "y": 0.36,
-      "z": -3.979
+      "x": 8.876,
+      "y": 0.12,
+      "z": -4.083
     },
-    "rotationY": 6.9,
+    "rotationY": -23,
     "scale": 0.96
   },
   "cassette-3": {
     "position": {
-      "x": 9.021,
-      "y": 0.48,
-      "z": -4.126
+      "x": 9.016,
+      "y": 0.24,
+      "z": -4.026
     },
-    "rotationY": -2.9,
+    "rotationY": -47,
     "scale": 0.96
   },
   "kitchen": {
@@ -83,9 +83,9 @@
   },
   "shelf": {
     "position": {
-      "x": 10.75,
+      "x": 10.8,
       "y": -0.15,
-      "z": -1
+      "z": 1
     },
     "rotationY": 0,
     "scale": 1
@@ -209,17 +209,6 @@
         "x": -0.171,
         "y": 1.21
       }
-    },
-    {
-      "position": {
-        "x": -5.319,
-        "y": 5.174,
-        "z": 2.932
-      },
-      "rotation": {
-        "x": -0.507,
-        "y": 0.523
-      }
     }
   ],
   "scratch-trophy": {
@@ -242,20 +231,20 @@
   },
   "csharp-trophy": {
     "position": {
-      "x": 0.121,
-      "y": 1.9,
-      "z": -0.217
+      "x": 0.172,
+      "y": 3.15,
+      "z": -0.073
     },
     "rotationY": 98,
     "scale": 0.62
   },
   "html-trophy": {
     "position": {
-      "x": 0.195,
+      "x": -0.244,
       "y": 1.9,
-      "z": 0.486
+      "z": 0.066
     },
-    "rotationY": 64,
+    "rotationY": 72,
     "scale": 0.62
   },
   "godot-trophy": {
@@ -269,11 +258,20 @@
   },
   "css-trophy": {
     "position": {
-      "x": -0.103,
+      "x": -0.096,
       "y": 1.9,
-      "z": 0.938
+      "z": 0.581
     },
-    "rotationY": 39,
+    "rotationY": 106,
+    "scale": 0.62
+  },
+  "javascript-trophy": {
+    "position": {
+      "x": -0.9,
+      "y": 1.9,
+      "z": 1.4
+    },
+    "rotationY": 342,
     "scale": 0.62
   },
   "laptop": {
@@ -311,5 +309,14 @@
     },
     "rotationY": 90,
     "scale": 2.5
+  },
+  "shelf-secondary": {
+    "position": {
+      "x": 10.8,
+      "y": -0.15,
+      "z": -4
+    },
+    "rotationY": 0,
+    "scale": 1
   }
 }
