@@ -831,19 +831,20 @@ export function createRoomScene(container, projects = []) {
       scale: trophy.scale.clone()
     };
     setHoveredTrophy(null);
+    trophyShowcaseAnchor.attach(trophy);
     const fromPosition = trophy.position.clone();
-    const fromRotation = trophy.rotation.clone();
+    const fromQuaternion = trophy.quaternion.clone();
     const fromScale = trophy.scale.clone();
-    trophyShowcaseAnchor.add(trophy);
     showcaseTransition = {
       trophy,
       startedAt: performance.now(),
       duration: SHOWCASE_TRANSITION_DURATION,
       fromPosition,
-      fromRotation,
+      fromQuaternion,
       fromScale,
       toPosition: new THREE.Vector3(0, -0.24, 0),
       toRotation: new THREE.Euler(0, SHOWCASE_BASE_ROTATION_Y, 0),
+      toQuaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, SHOWCASE_BASE_ROTATION_Y, 0)),
       toScale: new THREE.Vector3(SHOWCASE_FRONT_SCALE, SHOWCASE_FRONT_SCALE, SHOWCASE_FRONT_SCALE),
       closing: false
     };
@@ -862,18 +863,19 @@ export function createRoomScene(container, projects = []) {
       showcaseTransition = null;
       return;
     }
+    showcaseOriginalState.parent.attach(trophy);
     const fromPosition = trophy.position.clone();
-    const fromRotation = trophy.rotation.clone();
+    const fromQuaternion = trophy.quaternion.clone();
     const fromScale = trophy.scale.clone();
     showcaseTransition = {
       trophy,
       startedAt: performance.now(),
       duration: SHOWCASE_TRANSITION_DURATION,
       fromPosition,
-      fromRotation,
       fromScale,
       toPosition: showcaseOriginalState.position.clone(),
-      toRotation: showcaseOriginalState.rotation.clone(),
+      fromQuaternion,
+      toQuaternion: new THREE.Quaternion().setFromEuler(showcaseOriginalState.rotation),
       toScale: showcaseOriginalState.scale.clone(),
       closing: true
     };
@@ -887,14 +889,11 @@ export function createRoomScene(container, projects = []) {
     const eased = 1 - Math.pow(1 - progress, 3);
 
     trophy.position.lerpVectors(showcaseTransition.fromPosition, showcaseTransition.toPosition, eased);
-    trophy.rotation.x = THREE.MathUtils.lerp(showcaseTransition.fromRotation.x, showcaseTransition.toRotation.x, eased);
-    trophy.rotation.y = THREE.MathUtils.lerp(showcaseTransition.fromRotation.y, showcaseTransition.toRotation.y, eased);
-    trophy.rotation.z = THREE.MathUtils.lerp(showcaseTransition.fromRotation.z, showcaseTransition.toRotation.z, eased);
+    trophy.quaternion.slerpQuaternions(showcaseTransition.fromQuaternion, showcaseTransition.toQuaternion, eased);
     trophy.scale.lerpVectors(showcaseTransition.fromScale, showcaseTransition.toScale, eased);
 
     if (progress >= 1) {
       if (showcaseTransition.closing) {
-        showcaseOriginalState.parent.add(trophy);
         trophy.position.copy(showcaseOriginalState.position);
         trophy.rotation.copy(showcaseOriginalState.rotation);
         trophy.scale.copy(showcaseOriginalState.scale);
@@ -912,13 +911,14 @@ export function createRoomScene(container, projects = []) {
   // The showcased trophy rests in a subtle idle motion when untouched, but
   // a drag interaction takes over so users can freely rotate it by hand.
   function updateTrophyShowcaseTilt() {
-    if (!showcasedTrophyName) return;
+    if (!showcasedTrophyName || showcaseTransition) return;
     const trophy = shelfTrophies.find((entry) => entry.name === showcasedTrophyName);
     if (!trophy) return;
 
     if (showcaseDragState) {
       trophy.rotation.x = showcaseTilt.x;
       trophy.rotation.y = SHOWCASE_BASE_ROTATION_Y + showcaseTilt.y;
+      trophy.rotation.z = 0;
       return;
     }
 
@@ -929,6 +929,7 @@ export function createRoomScene(container, projects = []) {
     showcaseTilt.y += (idleY - showcaseTilt.y) * 0.04;
     trophy.rotation.x = showcaseTilt.x;
     trophy.rotation.y = SHOWCASE_BASE_ROTATION_Y + showcaseTilt.y;
+    trophy.rotation.z = 0;
   }
 
   function setHoveredTrophy(name) {
