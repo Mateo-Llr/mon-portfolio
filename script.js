@@ -92,8 +92,10 @@ const sheetContent = document.querySelector("#sheetContent");
 
 const trophyPanel = document.querySelector("#trophyPanel");
 const trophyPanelTitle = document.querySelector("#trophyPanelTitle");
-const trophyPanelMeta = document.querySelector("#trophyPanelMeta");
+const trophyPanelType = document.querySelector("#trophyPanelType");
 const trophyPanelDescription = document.querySelector("#trophyPanelDescription");
+const trophyPanelClose = document.querySelector("[data-close-trophy]");
+let trophyPanelReturnFocus = null;
 
 let roomScene = {
   updateScreen() {},
@@ -191,21 +193,34 @@ function closeProjectSheet() {
 function openTrophyPanel(id) {
   const trophy = trophies[id];
   if (!trophy || !trophyPanel) return;
+  trophyPanelReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   trophyPanelTitle.innerHTML = trophy.title;
-  trophyPanelMeta.innerHTML = trophy.meta;
+  if (trophyPanelType) trophyPanelType.innerHTML = trophy.meta;
   trophyPanelDescription.textContent = trophy.description;
   trophyPanel.classList.add("is-visible");
   trophyPanel.setAttribute("aria-hidden", "false");
+  trophyPanelClose?.focus();
 }
 
 function closeTrophyPanel() {
   if (!trophyPanel) return;
+  if (trophyPanel.contains(document.activeElement)) {
+    if (trophyPanelReturnFocus && typeof trophyPanelReturnFocus.focus === "function") {
+      trophyPanelReturnFocus.focus();
+    } else {
+      document.body.setAttribute("tabindex", "-1");
+      document.body.focus({ preventScroll: true });
+      document.body.removeAttribute("tabindex");
+    }
+  }
   trophyPanel.classList.remove("is-visible");
   trophyPanel.setAttribute("aria-hidden", "true");
+  trophyPanelReturnFocus = null;
   roomScene.closeTrophyShowcase();
 }
 
 document.querySelectorAll("[data-close-trophy]").forEach((element) => {
+  element.addEventListener("mousedown", (event) => event.preventDefault());
   element.addEventListener("click", closeTrophyPanel);
 });
 
