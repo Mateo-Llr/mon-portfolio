@@ -241,32 +241,34 @@ function addShelf(scene, shelves, x, y, z) {
     group.add(model);
 
     const shelfSkillsLabel = createPropLabel("MES COMPÉTENCES", {
-      fontSize: 120,
+      fontSize: 140,
       fontWeight: 700,
-      strokeWidth: 8,
-      width: 2.85,
-      height: 0.68,
+      strokeWidth: 10,
+      width: 2.95,
+      height: 0.74,
       canvasWidth: 1600,
-      canvasHeight: 260,
+      canvasHeight: 280,
       textColor: "#ffffff",
       outlineColor: "#111713",
       backgroundColor: "transparent"
     });
     shelfSkillsLabel.name = "shelf-skills-label";
-    shelfSkillsLabel.position.set(10.9, 4.95, -1.2);
+    shelfSkillsLabel.position.set(10.8, 5.25, -1.45);
     shelfSkillsLabel.rotation.y = -Math.PI / 2;
     shelfSkillsLabel.material.side = THREE.FrontSide;
     shelfSkillsLabel.material.depthTest = true;
     shelfSkillsLabel.material.depthWrite = true;
     shelfSkillsLabel.renderOrder = 30;
+    shelfSkillsLabel.userData.interactionType = "camera";
+    shelfSkillsLabel.userData.cameraIndex = 5;
     scene.add(shelfSkillsLabel);
 
     const shelfFocusZone = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.6, 1.15),
+      new THREE.BoxGeometry(3.8, 4.0, 0.32),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })
     );
     shelfFocusZone.name = "shelf-focus-zone";
-    shelfFocusZone.position.set(11.0, 4.7, -1.15);
+    shelfFocusZone.position.set(10.9, 4.05, -1.15);
     shelfFocusZone.rotation.y = -Math.PI / 2;
     shelfFocusZone.userData.interactionType = "camera";
     shelfFocusZone.userData.cameraIndex = 5;
@@ -1342,8 +1344,8 @@ export function createRoomScene(container, projects = []) {
       if (iconPath) {
         const icon = new Image();
         icon.onload = () => {
-          const iconSize = 34;
-          const padding = 16;
+          const iconSize = 46;
+          const padding = 14;
           context.save();
           context.globalAlpha = 0.98;
           context.drawImage(icon, canvasSize - iconSize - padding, padding, iconSize, iconSize);
@@ -1844,8 +1846,10 @@ export function createRoomScene(container, projects = []) {
     const plantReturnLabel = scene.getObjectByName("plant-return-label");
     const projectsLabel = scene.getObjectByName("projects-label");
     const shelfReturnButton = scene.getObjectByName("shelf-return-button");
+    const shelfSkillsLabel = scene.getObjectByName("shelf-skills-label");
     if (plantReturnLabel) interactiveObjects.push(plantReturnLabel);
     if (projectsLabel) interactiveObjects.push(projectsLabel);
+    if (shelfSkillsLabel) interactiveObjects.push(shelfSkillsLabel);
     if (shelfReturnButton) interactiveObjects.push(shelfReturnButton);
     const corkBoard = scene.getObjectByName("cork-board");
     if (corkBoard) interactiveObjects.push(corkBoard);
