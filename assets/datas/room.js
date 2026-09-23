@@ -221,7 +221,7 @@ function addWindow(scene, x, width, height, y = 5.25, z = -6.055, hasSill = true
 }
 
 function createPropLabel(title, options = {}) {
-  const { fontSize = 24, fontWeight = 600, strokeWidth = 0, width = 0.68, height = 0.09, canvasWidth = 512, canvasHeight = 64, textAlign = "center", textPadding = 0, backgroundColor = "#f4e8ca", textColor = "#111713", outlineColor = "#111713" } = options;
+  const { fontSize = 48, fontWeight = 600, strokeWidth = 0, width = 0.68, height = 0.09, canvasWidth = 512, canvasHeight = 64, textAlign = "center", textPadding = 0, backgroundColor = "#f4e8ca", textColor = "#111713", outlineColor = "#111713" } = options;
   const labelCanvas = document.createElement("canvas");
   labelCanvas.width = canvasWidth;
   labelCanvas.height = canvasHeight;

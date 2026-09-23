@@ -90,14 +90,14 @@ export function createCassetteModels(stage, projects) {
         object.rotation.set(0, cassetteAngles[index], 0);
         object.position.set([-0.18, 0.28, 0][index], index * 0.22, 0);
 
-        await document.fonts.load("29px Bungee");
+        await document.fonts.load("58px Bungee");
         const titleCanvas = document.createElement("canvas");
         titleCanvas.width = 512;
         titleCanvas.height = 64;
         const titleContext = titleCanvas.getContext("2d");
         titleContext.clearRect(0, 0, titleCanvas.width, titleCanvas.height);
         titleContext.fillStyle = "#111713";
-        titleContext.font = "29px 'Bungee', sans-serif";
+        titleContext.font = "58px 'Bungee', sans-serif";
         titleContext.textAlign = "center";
         titleContext.textBaseline = "middle";
         titleContext.fillText(projects[index].title.replace("<br>", " "), titleCanvas.width / 2, titleCanvas.height / 2);
