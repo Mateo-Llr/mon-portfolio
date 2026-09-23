@@ -515,6 +515,18 @@ export function createRoomScene(container, projects = []) {
     });
   }
 
+  function attachLinuxPenguin(shelfGroup) {
+    attachTrophy(shelfGroup, {
+      id: "linux-penguin",
+      label: "Linux Penguin",
+      modelPath: "assets/models/linux_penguin.mtl",
+      objPath: "assets/models/linux_penguin.obj",
+      scale: 0.62,
+      position: [0.95, 1.62, -0.08],
+      rotationY: 0.2
+    });
+  }
+
   function prepareRoomModel(model) {
     const cullingStates = [];
     model.traverse((part) => {
@@ -618,6 +630,7 @@ export function createRoomScene(container, projects = []) {
     attachGodotTrophy(shelf);
     attachCSSTrophy(shelf);
     attachJavaScriptTrophy(shelf);
+    attachLinuxPenguin(shelf);
     const tvStand = furnitureGroup(scene, "tv-stand", "Meuble TV");
     tvStand.add(box(5.8, 0.32, 0.9, darkWood, [6.0, 0.62, -5.15]));
     tvStand.add(box(5.6, 0.12, 0.95, tabletop, [6.0, 0.82, -5.15]));
@@ -1074,6 +1087,21 @@ export function createRoomScene(container, projects = []) {
     refreshCameraPositionSelect();
     const select = document.querySelector("#editor-camera-position");
     if (select) select.value = String(configuredCameraPositions.length - 1);
+  }
+
+  function overwriteCameraPosition() {
+    const select = document.querySelector("#editor-camera-position");
+    const index = Number(select?.value);
+    if (!select || !Number.isInteger(index) || !configuredCameraPositions[index]) return;
+    configuredCameraPositions[index] = {
+      position: { x: Number(camera.position.x.toFixed(3)), y: Number(camera.position.y.toFixed(3)), z: Number(camera.position.z.toFixed(3)) },
+      rotation: { x: Number(editor.pitch.toFixed(4)), y: Number(editor.yaw.toFixed(4)) }
+    };
+    configuredPositions.cameraPositions = configuredCameraPositions;
+    persistCameraPositions();
+    localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(configuredPositions));
+    const status = document.querySelector("#roomEditorStatus");
+    if (status) status.textContent = "Position caméra remplacée et enregistrée.";
   }
 
   function applySavedCameraPosition(index) {
@@ -1722,6 +1750,8 @@ export function createRoomScene(container, projects = []) {
       { id: "html-trophy", label: "Trophée HTML", object: scene.getObjectByName("html-trophy") },
       { id: "godot-trophy", label: "Trophée Godot", object: scene.getObjectByName("godot-trophy") },
       { id: "css-trophy", label: "Trophée CSS", object: scene.getObjectByName("css-trophy") },
+      { id: "javascript-trophy", label: "Trophée JavaScript", object: scene.getObjectByName("javascript-trophy") },
+      { id: "linux-penguin", label: "Pingouin Linux", object: scene.getObjectByName("linux-penguin") },
       ...roomCassettes.map((object, index) => ({ id: `cassette-${index + 1}`, label: `Cassette ${index + 1}`, object }))
     ];
     const furniture = [
@@ -1783,13 +1813,14 @@ export function createRoomScene(container, projects = []) {
     const panel = document.createElement("aside");
     panel.id = "roomEditor";
     panel.className = "room-editor";
-    panel.innerHTML = `<div class="room-editor-title">ÉDITION LIBRE</div><button type="button" id="roomEditorClose">QUITTER</button><label>Objet<select id="editor-object"></select></label><div class="editor-fields"><label>X<input id="editor-x" type="number" step="0.05"></label><label>Y<input id="editor-y" type="number" step="0.05"></label><label>Z<input id="editor-z" type="number" step="0.05"></label></div><label>Rotation Y<input id="editor-rotation" type="number" step="1"></label><label>Grossissement<input id="editor-scale" type="number" step="0.05" min="0.1" max="10"></label><label>Caméra<select id="editor-camera-position"></select></label><button type="button" id="roomEditorSave">VALIDER</button><button type="button" id="roomEditorClearCache">VIDER LE CACHE</button><p id="roomEditorStatus" role="status">Modifications non enregistrées</p><p>H : activer / quitter la caméra<br>ZQSD : se déplacer<br>A / E : descendre / monter<br>Souris : regarder autour<br>R : enregistrer la caméra</p>`;
+    panel.innerHTML = `<div class="room-editor-title">ÉDITION LIBRE</div><button type="button" id="roomEditorClose">QUITTER</button><label>Objet<select id="editor-object"></select></label><div class="editor-fields"><label>X<input id="editor-x" type="number" step="0.05"></label><label>Y<input id="editor-y" type="number" step="0.05"></label><label>Z<input id="editor-z" type="number" step="0.05"></label></div><label>Rotation Y<input id="editor-rotation" type="number" step="1"></label><label>Grossissement<input id="editor-scale" type="number" step="0.05" min="0.1" max="10"></label><label>Caméra<div class="camera-position-control"><select id="editor-camera-position"></select><button type="button" id="roomEditorOverwriteCamera" title="Remplacer la caméra choisie par la position actuelle">ÉCRASER</button></div></label><button type="button" id="roomEditorSave">VALIDER</button><button type="button" id="roomEditorClearCache">VIDER LE CACHE</button><p id="roomEditorStatus" role="status">Modifications non enregistrées</p><p>H : activer / quitter la caméra<br>ZQSD : se déplacer<br>A / E : descendre / monter<br>Souris : regarder autour<br>R : enregistrer la caméra</p>`;
     container.parentElement.appendChild(panel);
     const select = panel.querySelector("#editor-object");
     select.addEventListener("change", () => selectEditorObject(select.value));
     panel.querySelector("#editor-camera-position").addEventListener("change", (event) => {
       if (event.target.value !== "") applySavedCameraPosition(event.target.value);
     });
+    panel.querySelector("#roomEditorOverwriteCamera").addEventListener("click", overwriteCameraPosition);
     ["x", "y", "z"].forEach((axis) => panel.querySelector(`#editor-${axis}`).addEventListener("input", (event) => {
       if (editor.selected) {
         editor.selected.object.position[axis] = Number(event.target.value) || 0;

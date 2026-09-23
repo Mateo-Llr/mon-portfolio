@@ -82,6 +82,10 @@ button { cursor: pointer; }
 .room-editor button { float: right; margin-top: -25px; border: 0; color: var(--orange); background: transparent; font: inherit; }
 .room-editor label { display: block; margin: 10px 0; color: #aeb6a2; }
 .room-editor select, .room-editor input { width: 100%; margin-top: 5px; padding: 7px; border: 1px solid rgba(221, 213, 193, .3); color: #f4ead2; background: #27332d; font: inherit; }
+.camera-position-control { display: flex; align-items: stretch; gap: 5px; margin-top: 5px; }
+.camera-position-control select { flex: 1; min-width: 0; margin-top: 0; }
+.camera-position-control button { flex: 0 0 auto; margin: 0; padding: 0 8px; border: 1px solid rgba(221, 213, 193, .45); color: #e3d8bc; background: rgba(39, 51, 45, .9); font: inherit; font-size: 9px; }
+.camera-position-control button:hover { color: var(--yellow); border-color: var(--yellow); }
 .room-editor #roomEditorSave { width: 100%; margin-top: 12px; padding: 9px; border: 1px solid var(--orange); color: #fff2d2; background: var(--orange); font: inherit; letter-spacing: .08em; }
 .room-editor #roomEditorSave:hover:not(:disabled) { color: var(--orange); background: transparent; }
 .room-editor #roomEditorSave:disabled { cursor: wait; opacity: .65; }
