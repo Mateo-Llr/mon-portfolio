@@ -244,8 +244,8 @@ function createPropLabel(title, options = {}) {
   labelContext.fillText(title.replace("<br>", " "), textX, labelCanvas.height / 2);
   const labelTexture = new THREE.CanvasTexture(labelCanvas);
   labelTexture.colorSpace = THREE.SRGBColorSpace;
-  labelTexture.minFilter = THREE.LinearFilter;
-  labelTexture.magFilter = THREE.LinearFilter;
+  labelTexture.minFilter = THREE.NearestFilter;
+  labelTexture.magFilter = THREE.NearestFilter;
   return new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({ map: labelTexture, transparent: backgroundColor === "transparent" }));
 }
 
@@ -764,9 +764,15 @@ export function createRoomScene(container, projects = []) {
   const ambientLight = new THREE.HemisphereLight(0xb8d4cc, 0x302d28, 1.9);
   scene.add(ambientLight);
 
+  // Only ever used as a WebGL texture, so its backing resolution can be
+  // raised above the 960x540 logical space drawn by screen-renderer.js
+  // without touching any of its coordinates - see television.js for the
+  // full explanation of why this removes the pixelated text on phones.
+  const screenRenderScale = Math.min(window.devicePixelRatio || 1, 2);
   const screenCanvas = document.createElement("canvas");
-  screenCanvas.width = 960;
-  screenCanvas.height = 540;
+  screenCanvas.width = 960 * screenRenderScale;
+  screenCanvas.height = 540 * screenRenderScale;
+  screenCanvas.getContext("2d").scale(screenRenderScale, screenRenderScale);
   const screenTexture = new THREE.CanvasTexture(screenCanvas);
   screenTexture.colorSpace = THREE.SRGBColorSpace;
   screenTexture.minFilter = THREE.LinearFilter;
@@ -1484,8 +1490,8 @@ export function createRoomScene(container, projects = []) {
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
 
     const mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(width, height),
@@ -1736,8 +1742,8 @@ export function createRoomScene(container, projects = []) {
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
 
     const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 4.5), material);
@@ -2411,39 +2417,6 @@ export function createRoomScene(container, projects = []) {
     }
   }
 
-  const renderScheduler = {
-    animationFrameId: null,
-    lastRenderedAt: 0,
-    averageRenderTime: 16.7,
-    targetFrameTime: qualityProfile.lowPower ? 33.3 : 16.7,
-    pageVisible: document.visibilityState !== "hidden"
-  };
-
-  function scheduleRender() {
-    if (renderScheduler.animationFrameId !== null || !renderScheduler.pageVisible) return;
-    renderScheduler.animationFrameId = requestAnimationFrame((time) => {
-      renderScheduler.animationFrameId = null;
-      if (!renderScheduler.pageVisible) return;
-      if (renderScheduler.lastRenderedAt && time - renderScheduler.lastRenderedAt < renderScheduler.targetFrameTime) {
-        scheduleRender();
-        return;
-      }
-      render(time);
-    });
-  }
-
-  function handlePageVisibilityChange() {
-    renderScheduler.pageVisible = document.visibilityState !== "hidden";
-    if (!renderScheduler.pageVisible) {
-      if (renderScheduler.animationFrameId !== null) cancelAnimationFrame(renderScheduler.animationFrameId);
-      renderScheduler.animationFrameId = null;
-      render.previousTime = 0;
-      return;
-    }
-    renderScheduler.lastRenderedAt = 0;
-    scheduleRender();
-  }
-
   function render(time) {
     const deltaTime = Math.min(0.05, (time - (render.previousTime || time)) / 1000);
     render.previousTime = time;
@@ -2478,21 +2451,8 @@ export function createRoomScene(container, projects = []) {
     updateAboutPhotoPresentation(time);
     updateTrophyShowcaseTransition();
     updateTrophyShowcaseTilt();
-    const renderStartedAt = performance.now();
     composer.render();
-    const renderTime = performance.now() - renderStartedAt;
-    renderScheduler.averageRenderTime = renderScheduler.averageRenderTime * 0.85 + renderTime * 0.15;
-    if (!qualityProfile.lowPower) {
-      if (renderScheduler.averageRenderTime > 24) {
-        renderScheduler.targetFrameTime = 33.3;
-      } else if (renderScheduler.averageRenderTime > 18) {
-        renderScheduler.targetFrameTime = 25;
-      } else {
-        renderScheduler.targetFrameTime = 16.7;
-      }
-    }
-    renderScheduler.lastRenderedAt = time;
-    scheduleRender();
+    requestAnimationFrame(render);
   }
 
   camera.position.set(presentationCamera.position.x, presentationCamera.position.y, presentationCamera.position.z);
@@ -2501,7 +2461,6 @@ export function createRoomScene(container, projects = []) {
   applyCameraRotation();
   resize();
   window.addEventListener("resize", resize);
-  document.addEventListener("visibilitychange", handlePageVisibilityChange);
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   renderer.domElement.addEventListener("pointermove", handleRoomPointerMove);
   renderer.domElement.addEventListener("pointerleave", () => {
@@ -2672,7 +2631,7 @@ export function createRoomScene(container, projects = []) {
   renderer.domElement.addEventListener("pointerup", () => { editor.dragging = false; });
   renderer.domElement.addEventListener("pointercancel", () => { editor.dragging = false; });
   loadRoomProps();
-  loadConfiguredPositions().then(scheduleRender);
+  loadConfiguredPositions().then(() => requestAnimationFrame(render));
 
   return {
     updateScreen(project, isEjected = false) {

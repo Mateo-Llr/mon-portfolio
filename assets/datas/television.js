@@ -4,6 +4,14 @@ import { drawProjectScreen } from "./screen-renderer.js";
 
 const SCREEN_WIDTH = 960;
 const SCREEN_HEIGHT = 540;
+// This canvas only ever serves as a WebGL texture (it's never shown via
+// CSS), so its backing resolution can be raised above its logical 960x540
+// drawing space without touching a single coordinate in
+// screen-renderer.js. On high-density phone screens the TV can fill a much
+// larger portion of the physical display than on desktop, so a fixed
+// 960x540 source texture gets stretched and shows up pixelated - rendering
+// at devicePixelRatio (capped at 2 for memory/perf) fixes that.
+const SCREEN_RENDER_SCALE = Math.min(window.devicePixelRatio || 1, 2);
 
 function mapScreenUvs(screenMesh) {
   const geometry = screenMesh.geometry;
@@ -25,10 +33,19 @@ function mapScreenUvs(screenMesh) {
 
 export function createTelevisionModel(container, projects) {
   const canvas = document.createElement("canvas");
-  canvas.width = SCREEN_WIDTH;
-  canvas.height = SCREEN_HEIGHT;
+  canvas.width = SCREEN_WIDTH * SCREEN_RENDER_SCALE;
+  canvas.height = SCREEN_HEIGHT * SCREEN_RENDER_SCALE;
+  // Every draw call below (here and in screen-renderer.js) keeps working in
+  // the original 960x540 logical space; this scale just maps it onto the
+  // higher-resolution backing store set above.
+  canvas.getContext("2d").scale(SCREEN_RENDER_SCALE, SCREEN_RENDER_SCALE);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
+  // Linear filtering (instead of Nearest) is what actually removes the
+  // pixelated look once the source texture is supersampled: Nearest just
+  // picks one texel per sample with no smoothing, which is fine for crisp
+  // pixel-art textures but is exactly what makes small dynamic text look
+  // blocky when the mesh is viewed up close (e.g. fullscreen on a phone).
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
 
