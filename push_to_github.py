@@ -109,6 +109,11 @@ def stage_and_commit(branch: str) -> bool:
     return True
 
 
+def has_unpublished_commits(branch: str) -> bool:
+    result = run(["git", "rev-list", "--count", f"origin/{branch}..{branch}"], check=False)
+    return result.returncode == 0 and result.stdout.strip() != "0"
+
+
 def push(branch: str) -> None:
     try:
         run(["git", "pull", "--rebase", "origin", branch])
@@ -135,7 +140,7 @@ def main() -> int:
         ensure_git_identity()
         ensure_remote(args.repo)
         ensure_branch(args.branch)
-        if stage_and_commit(args.branch):
+        if stage_and_commit(args.branch) or has_unpublished_commits(args.branch):
             push(args.branch)
         else:
             print("Le dépôt est déjà à jour sur GitHub.")
