@@ -53,6 +53,16 @@ const trophies = {
     title: "CSS",
     meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;MISE EN FORME",
     description: "Utilisé avec HTML pour donner à mes pages web leur mise en page, leurs couleurs et leurs animations."
+  },
+  "javascript-trophy": {
+    title: "JAVASCRIPT",
+    meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;INTERACTIVITÉ WEB",
+    description: "Utilisé pour rendre mes pages web interactives et donner vie aux fonctionnalités de ce portfolio."
+  },
+  "linux-penguin": {
+    title: "LINUX",
+    meta: "SYSTÈME&nbsp;&nbsp; / &nbsp;&nbsp;ENVIRONNEMENT DE DÉVELOPPEMENT",
+    description: "Un environnement que j'explore pour mieux comprendre les outils, les commandes et les pratiques du développement."
   }
 };
 

@@ -297,17 +297,6 @@ function addShelf(scene, shelves, x, y, z, withInteractiveContent = true, object
     shelfSkillsLabel.userData.cameraIndex = 5;
     group.add(shelfSkillsLabel);
 
-    const shelfFocusZone = new THREE.Mesh(
-      new THREE.BoxGeometry(3.8, 4.0, 0.32),
-      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })
-    );
-    shelfFocusZone.name = "shelf-focus-zone";
-    shelfFocusZone.position.set(0.1, 4.2, -2.45);
-    shelfFocusZone.rotation.y = -Math.PI / 2;
-    shelfFocusZone.userData.interactionType = "camera";
-    shelfFocusZone.userData.cameraIndex = 5;
-    group.add(shelfFocusZone);
-
     const returnShelfButton = new THREE.Mesh(
       new THREE.BoxGeometry(1.15, 0.52, 0.7),
       new THREE.MeshStandardMaterial({ color: 0x2a1f1d, roughness: 0.78, metalness: 0.12 })
@@ -317,6 +306,16 @@ function addShelf(scene, shelves, x, y, z, withInteractiveContent = true, object
     returnShelfButton.rotation.y = -Math.PI / 2;
     returnShelfButton.userData.interactionType = "return";
     group.add(returnShelfButton);
+
+    const shelfReturnHitZone = new THREE.Mesh(
+      new THREE.BoxGeometry(2.3, 1.05, 0.9),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })
+    );
+    shelfReturnHitZone.name = "shelf-return-hit-zone";
+    shelfReturnHitZone.position.copy(returnShelfButton.position);
+    shelfReturnHitZone.rotation.copy(returnShelfButton.rotation);
+    shelfReturnHitZone.userData.interactionType = "return";
+    group.add(shelfReturnHitZone);
 
     const returnShelfLabel = createPropLabel("RETOUR", {
       fontSize: 62,
@@ -907,12 +906,13 @@ export function createRoomScene(container, projects = []) {
   }
 
   function setHoveredTrophy(name) {
-    if (hoveredTrophyName === name) return;
+    if (hoveredTrophyName === name && name) return;
     hoveredTrophyName = name;
     const trophy = name ? shelfTrophies.find((entry) => entry.name === name) : null;
     outlinePass.selectedObjects = trophy ? [trophy] : [];
   }
   let cameraTransition = null;
+  let activeInteractionCameraIndex = 2;
   let projectsFocusReached = false;
   let projectsFocusHandler = null;
   let projectsFocusRequested = false;
@@ -1051,6 +1051,7 @@ export function createRoomScene(container, projects = []) {
     }
     refreshCameraPositionSelect();
     presentationCameraPose = configuredCameraPositions[2] || presentationCamera;
+    activeInteractionCameraIndex = 2;
     camera.position.set(presentationCameraPose.position.x, presentationCameraPose.position.y, presentationCameraPose.position.z);
     editor.pitch = presentationCameraPose.rotation.x;
     editor.yaw = presentationCameraPose.rotation.y;
@@ -1158,11 +1159,13 @@ export function createRoomScene(container, projects = []) {
     projectsFocusRequested = true;
     const target = configuredCameraPositions[3];
     if (!target || editor.active) return;
+    activeInteractionCameraIndex = 3;
     focusCameraPose(target);
   }
 
   function focusCameraPose(target) {
     if (!target || editor.active) return;
+    outlinePass.selectedObjects = [];
     cameraTransition = {
       startedAt: performance.now(),
       duration: 1300,
@@ -1183,11 +1186,13 @@ export function createRoomScene(container, projects = []) {
 
   function focusOnInitialView() {
     projectsFocusRequested = false;
+    activeInteractionCameraIndex = 2;
     focusCameraPose(presentationCamera);
   }
 
   function focusOnAchievements() {
     projectsFocusRequested = false;
+    activeInteractionCameraIndex = 4;
     focusCameraPose(configuredCameraPositions[4]);
   }
 
@@ -1195,6 +1200,7 @@ export function createRoomScene(container, projects = []) {
     const target = configuredCameraPositions[Number(index)];
     if (!target || editor.active) return;
     projectsFocusRequested = false;
+    activeInteractionCameraIndex = Number(index);
     focusCameraPose(target);
   }
 
@@ -1966,28 +1972,37 @@ export function createRoomScene(container, projects = []) {
       -((event.clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1
     );
     editor.raycaster.setFromCamera(pointerPosition, camera);
-    const interactiveObjects = [...roomCassettes.filter(Boolean), roomTelevision].filter(Boolean);
-    if (roomCup) interactiveObjects.push(roomCup);
-    if (roomLaptop) interactiveObjects.push(roomLaptop);
-    interactiveObjects.push(...shelfTrophies);
+    const interactiveObjects = [];
     const plantReturnLabel = scene.getObjectByName("plant-return-label");
     const salonReturnPlantLabel = scene.getObjectByName("salon-return-plant-label");
     const projectsLabel = scene.getObjectByName("projects-label");
     const shelfReturnButton = scene.getObjectByName("shelf-return-button");
     const shelfSkillsLabel = scene.getObjectByName("shelf-skills-label");
-    if (plantReturnLabel) interactiveObjects.push(plantReturnLabel);
-    if (salonReturnPlantLabel) interactiveObjects.push(salonReturnPlantLabel);
-    if (projectsLabel) interactiveObjects.push(projectsLabel);
-    if (shelfSkillsLabel) interactiveObjects.push(shelfSkillsLabel);
-    if (shelfReturnButton) interactiveObjects.push(shelfReturnButton);
     const corkBoard = scene.getObjectByName("cork-board");
-    if (corkBoard) interactiveObjects.push(corkBoard);
-    const shelfFocusZone = scene.getObjectByName("shelf-focus-zone");
-    if (shelfFocusZone) interactiveObjects.push(shelfFocusZone);
+    if (activeInteractionCameraIndex === 2) {
+      if (roomCup) interactiveObjects.push(roomCup);
+      if (roomLaptop) interactiveObjects.push(roomLaptop);
+      const shelfReturnHitZone = scene.getObjectByName("shelf-return-hit-zone");
+      if (shelfReturnHitZone) interactiveObjects.push(shelfReturnHitZone);
+    } else if (activeInteractionCameraIndex === 3) {
+      if (plantReturnLabel) interactiveObjects.push(plantReturnLabel);
+      if (projectsLabel) interactiveObjects.push(projectsLabel);
+      const shelfModel = scene.getObjectByName("shelf-model");
+      if (shelfModel) interactiveObjects.push(shelfModel);
+      if (shelfSkillsLabel) interactiveObjects.push(shelfSkillsLabel);
+    } else if (activeInteractionCameraIndex === 4) {
+      interactiveObjects.push(...roomCassettes.filter(Boolean));
+      if (roomTelevision) interactiveObjects.push(roomTelevision);
+      if (salonReturnPlantLabel) interactiveObjects.push(salonReturnPlantLabel);
+    } else if (activeInteractionCameraIndex === 5) {
+      interactiveObjects.push(...shelfTrophies);
+      if (shelfReturnButton) interactiveObjects.push(shelfReturnButton);
+    } else if (activeInteractionCameraIndex === 9) {
+      if (corkBoard) interactiveObjects.push(corkBoard);
+    }
     const hits = editor.raycaster.intersectObjects(interactiveObjects, true);
     const hit = hits[0];
     if (hit) {
-      const isShelfActivationZone = hit.object.name === "shelf-focus-zone" || hit.object.name === "shelf-skills-label";
       const isShelfObjectInteraction =
         hit.object.name === "shelf-return-button"
         || shelfTrophies.some((trophy) => trophy.getObjectById(hit.object.id));
@@ -1995,16 +2010,19 @@ export function createRoomScene(container, projects = []) {
       let hitObject = hit.object;
       while (hitObject) {
         if (hitObject.name === "plant-return-label") return { type: "return-main" };
-        if (hitObject.name === "shelf-return-button") return { type: "return-salon" };
+        if (hitObject.name === "shelf-return-button") return { type: "return-salon", highlightObject: hitObject };
         if (hitObject.name === "projects-label") return { type: "projects" };
-        if (hitObject.name === "shelf-focus-zone" || hitObject.name === "shelf-skills-label") return { type: "camera", index: 5 };
+        if (hitObject.name === "shelf-model" || hitObject.name === "shelf-skills-label") return { type: "camera", index: 5 };
         if (hitObject.userData?.interactionType === "return") {
           const targetIndex = Number(hitObject.userData.returnTargetCameraIndex ?? 0);
-          return targetIndex === 3 ? { type: "return-salon" } : { type: "return-main" };
+          const highlightObject = hitObject.name === "shelf-return-hit-zone" ? shelfReturnButton : hitObject;
+          return targetIndex === 3
+            ? { type: "return-salon", highlightObject }
+            : { type: "return-main", highlightObject };
         }
-        if (hitObject.userData?.interactionType === "camera") return { type: "camera", index: Number(hitObject.userData.cameraIndex ?? 5) };
+        if (hitObject.userData?.interactionType === "camera") return { type: "camera", index: Number(hitObject.userData.cameraIndex ?? 5), highlightObject: hitObject };
         if (hitObject.userData?.interactionType === "mailto") {
-          return { type: "mailto", href: hitObject.userData.actionUrl || "mailto:mateoleuillier@outlook.fr" };
+          return { type: "mailto", href: hitObject.userData.actionUrl || "mailto:mateoleuillier@outlook.fr", highlightObject: hitObject };
         }
         hitObject = hitObject.parent;
       }
@@ -2026,6 +2044,21 @@ export function createRoomScene(container, projects = []) {
     return null;
   }
 
+  function getInteractionHighlight(interaction) {
+    if (!interaction) return null;
+    if (interaction.highlightObject) return interaction.highlightObject;
+    if (interaction.type === "cassette") return roomCassettes[interaction.index] || null;
+    if (interaction.type === "television" || interaction.type === "television-action") return roomTelevision;
+    if (interaction.type === "cup") return roomCup;
+    if (interaction.type === "laptop") return roomLaptop;
+    if (interaction.type === "trophy") return shelfTrophies.find((entry) => entry.name === interaction.name) || null;
+    if (interaction.type === "return-main") return scene.getObjectByName("plant") || null;
+    if (interaction.type === "projects") return scene.getObjectByName("tv-stand") || null;
+    if (interaction.type === "camera" && interaction.index === 5) return scene.getObjectByName("shelf-model") || null;
+    if (interaction.type === "return-salon") return scene.getObjectByName("shelf-return-button") || null;
+    return null;
+  }
+
   function handleRoomPointerMove(event) {
     const interaction = getRoomInteraction(event);
     if (interaction?.type === "television-action") {
@@ -2041,7 +2074,8 @@ export function createRoomScene(container, projects = []) {
     } else {
       roomActionUniforms.hasHoveredAction.value = 0;
     }
-    setHoveredTrophy(interaction?.type === "trophy" ? interaction.name : null);
+    const highlightedObject = getInteractionHighlight(interaction);
+    outlinePass.selectedObjects = highlightedObject ? [highlightedObject] : [];
     renderer.domElement.style.cursor = interaction ? "pointer" : "default";
   }
 
@@ -2121,7 +2155,7 @@ export function createRoomScene(container, projects = []) {
   renderer.domElement.addEventListener("pointermove", handleRoomPointerMove);
   renderer.domElement.addEventListener("pointerleave", () => {
     roomActionUniforms.hasHoveredAction.value = 0;
-    setHoveredTrophy(null);
+    outlinePass.selectedObjects = [];
   });
   renderer.domElement.addEventListener("click", handleRoomClick);
   renderer.domElement.addEventListener("pointerdown", (event) => {

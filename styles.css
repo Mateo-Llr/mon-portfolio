@@ -341,6 +341,105 @@ input, textarea, [contenteditable="true"] { cursor: url("assets/cursors/Text%20S
 [role="progressbar"] { cursor: url("assets/cursors/Busy.ani"), wait; }
 [aria-disabled="true"], :disabled { cursor: url("assets/cursors/Unavailable.cur"), not-allowed; }
 
+/* A project opens as a compact editorial dossier instead of a blank wall of text. */
+.project-sheet {
+  padding: 5vh 5vw;
+  background: rgba(9, 13, 11, .2);
+}
+.sheet-backdrop {
+  background: rgba(10, 15, 13, .78);
+  backdrop-filter: blur(12px) saturate(.82);
+}
+.sheet-panel {
+  width: min(1080px, 100%);
+  max-height: min(88dvh, 760px);
+  border: 1px solid rgba(245, 188, 67, .62);
+  background:
+    linear-gradient(90deg, rgba(245, 188, 67, .055) 1px, transparent 1px) 0 0 / 76px 100%,
+    linear-gradient(#26322c, #1b241f);
+  box-shadow: 12px 14px 0 rgba(8, 12, 10, .38), 0 28px 80px rgba(0, 0, 0, .48);
+}
+.sheet-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 10px;
+  width: 1px;
+  background: rgba(239, 103, 61, .28);
+  pointer-events: none;
+}
+.sheet-toolbar {
+  position: relative;
+  z-index: 1;
+  padding: 15px 20px 14px 30px;
+  background: rgba(13, 19, 16, .42);
+  border-bottom-color: rgba(221, 213, 193, .24);
+}
+.sheet-body {
+  display: grid;
+  grid-template-columns: minmax(130px, 20%) minmax(0, 1fr);
+  grid-template-areas:
+    "index title"
+    "index meta"
+    "index lead"
+    "index rule"
+    "index content";
+  column-gap: clamp(34px, 6vw, 74px);
+  max-height: calc(min(88dvh, 760px) - 54px);
+  padding: 52px clamp(30px, 5vw, 70px) 58px 30px;
+}
+.sheet-index {
+  grid-area: index;
+  align-self: start;
+  margin: 5px 0 0;
+  padding-top: 12px;
+  border-top: 2px solid var(--orange);
+  color: #f5bc43;
+  line-height: 1.6;
+}
+.sheet-body h2 {
+  grid-area: title;
+  max-width: 720px;
+  font-size: clamp(58px, 8vw, 112px);
+  line-height: .82;
+  text-wrap: balance;
+}
+.sheet-meta { grid-area: meta; margin-top: 25px; }
+.sheet-lead {
+  grid-area: lead;
+  max-width: 710px;
+  margin-top: 29px;
+  color: #f0e8d7;
+  font-size: clamp(20px, 2.35vw, 29px);
+}
+.sheet-rule { grid-area: rule; margin: 31px 0 25px; }
+.sheet-content {
+  grid-area: content;
+  max-width: 710px;
+  padding-right: 16px;
+  font-size: 15px;
+}
+.sheet-content h3 { margin-top: 30px; color: #f5bc43; }
+.sheet-content p:last-child { margin-bottom: 0; }
+
+@media (max-width: 600px) {
+  .project-sheet { padding: 0; }
+  .sheet-panel { max-height: 100dvh; min-height: 100dvh; }
+  .sheet-toolbar { padding: 16px 18px 15px 25px; }
+  .sheet-body {
+    display: block;
+    max-height: calc(100dvh - 54px);
+    padding: 34px 25px 52px;
+  }
+  .sheet-index { margin-bottom: 18px; }
+  .sheet-body h2 { font-size: clamp(50px, 17vw, 82px); }
+  .sheet-meta { margin-top: 23px; }
+  .sheet-lead { margin-top: 30px; font-size: 22px; }
+  .sheet-rule { margin: 30px 0 25px; }
+  .sheet-content { padding-right: 0; font-size: 14px; }
+}
+
 /* Keep the interface readable above the physical table facade. */
 .masthead, .wall-copy, .desk-footer { z-index: 12; }
 .masthead { position: relative; }
