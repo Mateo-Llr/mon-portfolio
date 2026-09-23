@@ -977,6 +977,12 @@ export function createRoomScene(container, projects = []) {
     drawRoomScreen(projects[0] || { title: "SIGNAL", meta: "READY", description: "" }, true);
   }
   let lastLightingUpdate = -1;
+  let aboutPhotoLabel = null;
+  let aboutPhotoReturnLabel = null;
+  let aboutSlamWallInfo = null;
+  let aboutPhotoGroup = null;
+  let aboutPhotoLabelCharacterCount = -1;
+  let aboutPhotoLayoutInitialized = false;
   const windowColor = new THREE.Color();
   const ambientSkyColor = new THREE.Color();
   const ambientGroundColor = new THREE.Color();
@@ -2099,11 +2105,26 @@ export function createRoomScene(container, projects = []) {
   }
 
   const pointer = { x: 0, y: 0 };
+  const canvasBounds = { left: 0, top: 0, width: 1, height: 1 };
+  const roomInteractionPointer = new THREE.Vector2();
+  const roomInteractiveObjects = [];
+  let pendingRoomPointer = null;
+  let roomPointerFrame = 0;
+
+  function updateCanvasBounds() {
+    const bounds = renderer.domElement.getBoundingClientRect();
+    canvasBounds.left = bounds.left;
+    canvasBounds.top = bounds.top;
+    canvasBounds.width = bounds.width || 1;
+    canvasBounds.height = bounds.height || 1;
+  }
+
   function resize() {
     renderer.setSize(container.clientWidth, container.clientHeight, false);
     updateCameraProjection();
     composer.setSize(container.clientWidth, container.clientHeight);
     outlinePass.resolution.set(container.clientWidth, container.clientHeight);
+    updateCanvasBounds();
     if (activeRoomScreenProject) drawRoomScreen(activeRoomScreenProject, activeRoomScreenEjected);
   }
   function onPointerMove(event) {
@@ -2129,13 +2150,12 @@ export function createRoomScene(container, projects = []) {
 
   function getRoomInteraction(event) {
     if (editor.active || cameraTransition || showcasedTrophyName) return null;
-    const canvasBounds = renderer.domElement.getBoundingClientRect();
-    const pointerPosition = new THREE.Vector2(
+    roomInteractionPointer.set(
       ((event.clientX - canvasBounds.left) / canvasBounds.width) * 2 - 1,
       -((event.clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1
     );
-    editor.raycaster.setFromCamera(pointerPosition, camera);
-    const interactiveObjects = [];
+    editor.raycaster.setFromCamera(roomInteractionPointer, camera);
+    roomInteractiveObjects.length = 0;
     const plantReturnLabel = scene.getObjectByName("plant-return-label");
     const salonReturnPlantLabel = scene.getObjectByName("salon-return-plant-label");
     const projectsLabel = scene.getObjectByName("projects-label");
@@ -2145,32 +2165,34 @@ export function createRoomScene(container, projects = []) {
     const myPhoto = scene.getObjectByName("my-photo");
     const myPhotoReturnLabel = scene.getObjectByName("my-photo-return-label");
     if (activeInteractionCameraIndex === 0) {
-      if (myPhotoReturnLabel) interactiveObjects.push(myPhotoReturnLabel);
+      if (myPhotoReturnLabel) roomInteractiveObjects.push(myPhotoReturnLabel);
     } else if (myPhoto) {
-      interactiveObjects.push(myPhoto);
+      roomInteractiveObjects.push(myPhoto);
     }
     if (activeInteractionCameraIndex === 2) {
-      if (roomCup) interactiveObjects.push(roomCup);
-      if (roomLaptop) interactiveObjects.push(roomLaptop);
+      if (roomCup) roomInteractiveObjects.push(roomCup);
+      if (roomLaptop) roomInteractiveObjects.push(roomLaptop);
       const shelfReturnHitZone = scene.getObjectByName("shelf-return-hit-zone");
-      if (shelfReturnHitZone) interactiveObjects.push(shelfReturnHitZone);
+      if (shelfReturnHitZone) roomInteractiveObjects.push(shelfReturnHitZone);
     } else if (activeInteractionCameraIndex === 3) {
-      if (plantReturnLabel) interactiveObjects.push(plantReturnLabel);
-      if (projectsLabel) interactiveObjects.push(projectsLabel);
+      if (plantReturnLabel) roomInteractiveObjects.push(plantReturnLabel);
+      if (projectsLabel) roomInteractiveObjects.push(projectsLabel);
       const shelfModel = scene.getObjectByName("shelf-model");
-      if (shelfModel) interactiveObjects.push(shelfModel);
-      if (shelfSkillsLabel) interactiveObjects.push(shelfSkillsLabel);
+      if (shelfModel) roomInteractiveObjects.push(shelfModel);
+      if (shelfSkillsLabel) roomInteractiveObjects.push(shelfSkillsLabel);
     } else if (activeInteractionCameraIndex === 4) {
-      interactiveObjects.push(...roomCassettes.filter((cassette, index) => cassette?.visible && !cassetteStates.get(index)));
-      if (roomTelevision) interactiveObjects.push(roomTelevision);
-      if (salonReturnPlantLabel) interactiveObjects.push(salonReturnPlantLabel);
+      roomCassettes.forEach((cassette, index) => {
+        if (cassette?.visible && !cassetteStates.get(index)) roomInteractiveObjects.push(cassette);
+      });
+      if (roomTelevision) roomInteractiveObjects.push(roomTelevision);
+      if (salonReturnPlantLabel) roomInteractiveObjects.push(salonReturnPlantLabel);
     } else if (activeInteractionCameraIndex === 5) {
-      interactiveObjects.push(...shelfTrophies);
-      if (shelfReturnButton) interactiveObjects.push(shelfReturnButton);
+      roomInteractiveObjects.push(...shelfTrophies);
+      if (shelfReturnButton) roomInteractiveObjects.push(shelfReturnButton);
     } else if (activeInteractionCameraIndex === 9) {
-      if (corkBoard) interactiveObjects.push(corkBoard);
+      if (corkBoard) roomInteractiveObjects.push(corkBoard);
     }
-    const hits = editor.raycaster.intersectObjects(interactiveObjects, true);
+    const hits = editor.raycaster.intersectObjects(roomInteractiveObjects, true);
     const hit = hits[0];
     if (hit) {
       const isShelfObjectInteraction =
@@ -2234,12 +2256,11 @@ export function createRoomScene(container, projects = []) {
   }
 
   function getPointerOnCameraPlane(event, origin, target = new THREE.Vector3()) {
-    const bounds = renderer.domElement.getBoundingClientRect();
-    const pointerPosition = new THREE.Vector2(
-      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
-      -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+    roomInteractionPointer.set(
+      ((event.clientX - canvasBounds.left) / canvasBounds.width) * 2 - 1,
+      -((event.clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1
     );
-    editor.raycaster.setFromCamera(pointerPosition, camera);
+    editor.raycaster.setFromCamera(roomInteractionPointer, camera);
     const planeNormal = camera.getWorldDirection(new THREE.Vector3());
     const cameraPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, origin);
     return editor.raycaster.ray.intersectPlane(cameraPlane, target) ? target : null;
@@ -2247,12 +2268,11 @@ export function createRoomScene(container, projects = []) {
 
   function isTelevisionDrop(event) {
     if (!roomTelevision) return false;
-    const bounds = renderer.domElement.getBoundingClientRect();
-    const pointerPosition = new THREE.Vector2(
-      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
-      -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+    roomInteractionPointer.set(
+      ((event.clientX - canvasBounds.left) / canvasBounds.width) * 2 - 1,
+      -((event.clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1
     );
-    editor.raycaster.setFromCamera(pointerPosition, camera);
+    editor.raycaster.setFromCamera(roomInteractionPointer, camera);
     return editor.raycaster.intersectObject(roomTelevision, true).length > 0;
   }
 
@@ -2308,15 +2328,18 @@ export function createRoomScene(container, projects = []) {
     cassetteDragState.object.quaternion.slerp(cassetteDragState.dragQuaternion, smoothing);
   }
 
-  function handleRoomPointerMove(event) {
+  function processRoomPointerMove() {
+    roomPointerFrame = 0;
+    const event = pendingRoomPointer;
+    pendingRoomPointer = null;
+    if (!event) return;
     const interaction = getRoomInteraction(event);
     if (interaction?.type === "television-action") {
-      const bounds = renderer.domElement.getBoundingClientRect();
-      const pointerPosition = new THREE.Vector2(
-        ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
-        -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+      roomInteractionPointer.set(
+        ((event.clientX - canvasBounds.left) / canvasBounds.width) * 2 - 1,
+        -((event.clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1
       );
-      editor.raycaster.setFromCamera(pointerPosition, camera);
+      editor.raycaster.setFromCamera(roomInteractionPointer, camera);
       const hit = editor.raycaster.intersectObject(roomTelevision.getObjectByName("screen"), false)[0];
       if (hit?.uv1) roomActionUniforms.hoverUv.value.copy(hit.uv1);
       roomActionUniforms.hasHoveredAction.value = 1;
@@ -2326,6 +2349,11 @@ export function createRoomScene(container, projects = []) {
     const highlightedObject = getInteractionHighlight(interaction);
     outlinePass.selectedObjects = highlightedObject ? [highlightedObject] : [];
     renderer.domElement.style.cursor = interaction ? "pointer" : "default";
+  }
+
+  function handleRoomPointerMove(event) {
+    pendingRoomPointer = { clientX: event.clientX, clientY: event.clientY };
+    if (!roomPointerFrame) roomPointerFrame = requestAnimationFrame(processRoomPointerMove);
   }
 
   function handleRoomClick(event) {
@@ -2392,27 +2420,32 @@ export function createRoomScene(container, projects = []) {
   }
 
   function updateAboutPhotoPresentation(time) {
-    const photoLabel = scene.getObjectByName("my-photo-label");
-    const photoReturnLabel = scene.getObjectByName("my-photo-return-label");
-    const slamWallInfo = scene.getObjectByName("slam-wall-info");
-    const photoGroup = scene.getObjectByName("my-photo");
+    if (!aboutPhotoLabel) aboutPhotoLabel = scene.getObjectByName("my-photo-label");
+    if (!aboutPhotoReturnLabel) aboutPhotoReturnLabel = scene.getObjectByName("my-photo-return-label");
+    if (!aboutSlamWallInfo) aboutSlamWallInfo = scene.getObjectByName("slam-wall-info");
+    if (!aboutPhotoGroup) aboutPhotoGroup = scene.getObjectByName("my-photo");
     const isAboutView = activeInteractionCameraIndex === 0;
     if (isAboutView && !aboutPhotoWasVisible) aboutPhotoRevealStartedAt = time;
     aboutPhotoWasVisible = isAboutView;
     const revealProgress = isAboutView ? THREE.MathUtils.clamp((time - aboutPhotoRevealStartedAt) / 900, 0, 1) : 1;
     const revealEase = 1 - Math.pow(1 - revealProgress, 3);
-    if (photoLabel) {
-      photoLabel.visible = true;
-      drawAboutPhotoLabel(photoLabel, isAboutView ? Math.ceil("À PROPOS DE MOI".length * revealEase) : "À PROPOS DE MOI".length);
+    if (aboutPhotoLabel) {
+      aboutPhotoLabel.visible = true;
+      const characterCount = isAboutView ? Math.ceil("À PROPOS DE MOI".length * revealEase) : "À PROPOS DE MOI".length;
+      if (characterCount !== aboutPhotoLabelCharacterCount) {
+        drawAboutPhotoLabel(aboutPhotoLabel, characterCount);
+        aboutPhotoLabelCharacterCount = characterCount;
+      }
     }
-    if (photoReturnLabel) {
-      photoReturnLabel.visible = isAboutView;
+    if (aboutPhotoReturnLabel) {
+      aboutPhotoReturnLabel.visible = isAboutView;
     }
-    if (slamWallInfo) {
-      slamWallInfo.visible = isAboutView;
-      slamWallInfo.material.opacity = isAboutView ? revealEase : 0;
-      if (photoGroup) {
-        slamWallInfo.position.set(photoGroup.position.x + 1.2, photoGroup.position.y, photoGroup.position.z + 0.065);
+    if (aboutSlamWallInfo) {
+      aboutSlamWallInfo.visible = isAboutView;
+      aboutSlamWallInfo.material.opacity = isAboutView ? revealEase : 0;
+      if (aboutPhotoGroup && !aboutPhotoLayoutInitialized) {
+        aboutSlamWallInfo.position.set(aboutPhotoGroup.position.x + 1.2, aboutPhotoGroup.position.y, aboutPhotoGroup.position.z + 0.065);
+        aboutPhotoLayoutInitialized = true;
       }
     }
   }
@@ -2464,8 +2497,14 @@ export function createRoomScene(container, projects = []) {
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   renderer.domElement.addEventListener("pointermove", handleRoomPointerMove);
   renderer.domElement.addEventListener("pointerleave", () => {
+    pendingRoomPointer = null;
+    if (roomPointerFrame) {
+      cancelAnimationFrame(roomPointerFrame);
+      roomPointerFrame = 0;
+    }
     roomActionUniforms.hasHoveredAction.value = 0;
     outlinePass.selectedObjects = [];
+    renderer.domElement.style.cursor = "default";
   });
   renderer.domElement.addEventListener("click", handleRoomClick);
   renderer.domElement.addEventListener("pointerdown", (event) => {
@@ -2507,12 +2546,11 @@ export function createRoomScene(container, projects = []) {
     if (!showcasedTrophyName || editor.active) return;
     const trophy = shelfTrophies.find((entry) => entry.name === showcasedTrophyName);
     if (!trophy) return;
-    const bounds = renderer.domElement.getBoundingClientRect();
-    const pointer = new THREE.Vector2(
-      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
-      -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+    roomInteractionPointer.set(
+      ((event.clientX - canvasBounds.left) / canvasBounds.width) * 2 - 1,
+      -((event.clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1
     );
-    editor.raycaster.setFromCamera(pointer, camera);
+    editor.raycaster.setFromCamera(roomInteractionPointer, camera);
     const hit = editor.raycaster.intersectObject(trophy, true)[0];
     if (!hit) return;
     showcaseDragState = {
@@ -2578,9 +2616,8 @@ export function createRoomScene(container, projects = []) {
 
   renderer.domElement.addEventListener("pointerdown", (event) => {
     if (!editor.active || !editor.selected || event.button !== 0) return;
-    const bounds = renderer.domElement.getBoundingClientRect();
-    editor.pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-    editor.pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+    editor.pointer.x = ((event.clientX - canvasBounds.left) / canvasBounds.width) * 2 - 1;
+    editor.pointer.y = -((event.clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1;
     editor.raycaster.setFromCamera(editor.pointer, camera);
     const selectedObject = editor.selected.object;
     const planeY = selectedObject.position.y;
@@ -2601,9 +2638,8 @@ export function createRoomScene(container, projects = []) {
   });
   renderer.domElement.addEventListener("pointermove", (event) => {
     if (!editor.active || !editor.dragging || !editor.selected) return;
-    const bounds = renderer.domElement.getBoundingClientRect();
-    editor.pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-    editor.pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+    editor.pointer.x = ((event.clientX - canvasBounds.left) / canvasBounds.width) * 2 - 1;
+    editor.pointer.y = -((event.clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1;
     editor.raycaster.setFromCamera(editor.pointer, camera);
     editor.floor.constant = -editor.objectStartPosition.y;
     if (editor.raycaster.ray.intersectPlane(editor.floor, editor.hitPoint)) {
