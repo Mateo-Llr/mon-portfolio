@@ -2411,6 +2411,39 @@ export function createRoomScene(container, projects = []) {
     }
   }
 
+  const renderScheduler = {
+    animationFrameId: null,
+    lastRenderedAt: 0,
+    averageRenderTime: 16.7,
+    targetFrameTime: qualityProfile.lowPower ? 33.3 : 16.7,
+    pageVisible: document.visibilityState !== "hidden"
+  };
+
+  function scheduleRender() {
+    if (renderScheduler.animationFrameId !== null || !renderScheduler.pageVisible) return;
+    renderScheduler.animationFrameId = requestAnimationFrame((time) => {
+      renderScheduler.animationFrameId = null;
+      if (!renderScheduler.pageVisible) return;
+      if (renderScheduler.lastRenderedAt && time - renderScheduler.lastRenderedAt < renderScheduler.targetFrameTime) {
+        scheduleRender();
+        return;
+      }
+      render(time);
+    });
+  }
+
+  function handlePageVisibilityChange() {
+    renderScheduler.pageVisible = document.visibilityState !== "hidden";
+    if (!renderScheduler.pageVisible) {
+      if (renderScheduler.animationFrameId !== null) cancelAnimationFrame(renderScheduler.animationFrameId);
+      renderScheduler.animationFrameId = null;
+      render.previousTime = 0;
+      return;
+    }
+    renderScheduler.lastRenderedAt = 0;
+    scheduleRender();
+  }
+
   function render(time) {
     const deltaTime = Math.min(0.05, (time - (render.previousTime || time)) / 1000);
     render.previousTime = time;
@@ -2445,8 +2478,21 @@ export function createRoomScene(container, projects = []) {
     updateAboutPhotoPresentation(time);
     updateTrophyShowcaseTransition();
     updateTrophyShowcaseTilt();
+    const renderStartedAt = performance.now();
     composer.render();
-    requestAnimationFrame(render);
+    const renderTime = performance.now() - renderStartedAt;
+    renderScheduler.averageRenderTime = renderScheduler.averageRenderTime * 0.85 + renderTime * 0.15;
+    if (!qualityProfile.lowPower) {
+      if (renderScheduler.averageRenderTime > 24) {
+        renderScheduler.targetFrameTime = 33.3;
+      } else if (renderScheduler.averageRenderTime > 18) {
+        renderScheduler.targetFrameTime = 25;
+      } else {
+        renderScheduler.targetFrameTime = 16.7;
+      }
+    }
+    renderScheduler.lastRenderedAt = time;
+    scheduleRender();
   }
 
   camera.position.set(presentationCamera.position.x, presentationCamera.position.y, presentationCamera.position.z);
@@ -2455,6 +2501,7 @@ export function createRoomScene(container, projects = []) {
   applyCameraRotation();
   resize();
   window.addEventListener("resize", resize);
+  document.addEventListener("visibilitychange", handlePageVisibilityChange);
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   renderer.domElement.addEventListener("pointermove", handleRoomPointerMove);
   renderer.domElement.addEventListener("pointerleave", () => {
@@ -2625,7 +2672,7 @@ export function createRoomScene(container, projects = []) {
   renderer.domElement.addEventListener("pointerup", () => { editor.dragging = false; });
   renderer.domElement.addEventListener("pointercancel", () => { editor.dragging = false; });
   loadRoomProps();
-  loadConfiguredPositions().then(() => requestAnimationFrame(render));
+  loadConfiguredPositions().then(scheduleRender);
 
   return {
     updateScreen(project, isEjected = false) {
