@@ -104,8 +104,8 @@ export function createCassetteModels(stage, projects) {
         titleContext.fillText(projects[index].title.replace("<br>", " "), titleCanvas.width / 2, titleCanvas.height / 2);
         const titleTexture = new THREE.CanvasTexture(titleCanvas);
         titleTexture.colorSpace = THREE.SRGBColorSpace;
-        titleTexture.minFilter = THREE.NearestFilter;
-        titleTexture.magFilter = THREE.NearestFilter;
+        titleTexture.minFilter = THREE.LinearFilter;
+        titleTexture.magFilter = THREE.LinearFilter;
         const titleMaterial = new THREE.MeshBasicMaterial({ map: titleTexture, transparent: true, depthWrite: false });
         const titlePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.1), titleMaterial);
         titlePlane.position.set(0, 0.064, 0.316);

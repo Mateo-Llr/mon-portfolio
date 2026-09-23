@@ -244,8 +244,8 @@ function createPropLabel(title, options = {}) {
   labelContext.fillText(title.replace("<br>", " "), textX, labelCanvas.height / 2);
   const labelTexture = new THREE.CanvasTexture(labelCanvas);
   labelTexture.colorSpace = THREE.SRGBColorSpace;
-  labelTexture.minFilter = THREE.NearestFilter;
-  labelTexture.magFilter = THREE.NearestFilter;
+  labelTexture.minFilter = THREE.LinearFilter;
+  labelTexture.magFilter = THREE.LinearFilter;
   return new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({ map: labelTexture, transparent: backgroundColor === "transparent" }));
 }
 
@@ -769,8 +769,8 @@ export function createRoomScene(container, projects = []) {
   screenCanvas.height = 540;
   const screenTexture = new THREE.CanvasTexture(screenCanvas);
   screenTexture.colorSpace = THREE.SRGBColorSpace;
-  screenTexture.minFilter = THREE.NearestFilter;
-  screenTexture.magFilter = THREE.NearestFilter;
+  screenTexture.minFilter = THREE.LinearFilter;
+  screenTexture.magFilter = THREE.LinearFilter;
   let roomTelevision = null;
   let roomTelevisionFeaturesLoaded = false;
   let roomCup = null;
@@ -1484,8 +1484,8 @@ export function createRoomScene(container, projects = []) {
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.minFilter = THREE.NearestFilter;
-    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
 
     const mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(width, height),
@@ -1736,8 +1736,8 @@ export function createRoomScene(container, projects = []) {
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.minFilter = THREE.NearestFilter;
-    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
 
     const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 4.5), material);

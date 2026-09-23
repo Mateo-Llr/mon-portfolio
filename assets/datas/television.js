@@ -29,8 +29,8 @@ export function createTelevisionModel(container, projects) {
   canvas.height = SCREEN_HEIGHT;
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.NearestFilter;
-  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(27, 1, 0.1, 100);
