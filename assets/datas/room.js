@@ -348,6 +348,7 @@ export function createRoomScene(container, projects = []) {
   const scene = new THREE.Scene();
   window.__roomDebug = { scene, camera: null, editor: null };
   const CAMERA_FOV = 45;
+  const CAMERA_REFERENCE_ASPECT = 16 / 9;
   const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 100);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
@@ -394,6 +395,20 @@ export function createRoomScene(container, projects = []) {
   scene.add(camera);
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
+  function getResponsiveCameraFov(aspect) {
+    const safeAspect = Math.max(0.35, aspect || CAMERA_REFERENCE_ASPECT);
+    const referenceHalfFov = THREE.MathUtils.degToRad(CAMERA_FOV / 2);
+    const halfFov = Math.atan(Math.tan(referenceHalfFov) * CAMERA_REFERENCE_ASPECT / safeAspect);
+    return THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(halfFov * 2), CAMERA_FOV, 104);
+  }
+
+  function updateCameraProjection(width = container.clientWidth, height = container.clientHeight) {
+    const aspect = width / Math.max(1, height);
+    camera.aspect = aspect;
+    camera.fov = getResponsiveCameraFov(aspect);
+    camera.updateProjectionMatrix();
+  }
+
   function markShadowsDirty() {
     renderer.shadowMap.needsUpdate = true;
   }
@@ -1988,8 +2003,7 @@ export function createRoomScene(container, projects = []) {
       camera.rotation.reorder("YXZ");
       editor.yaw = camera.rotation.y;
       editor.pitch = camera.rotation.x;
-      camera.fov = CAMERA_FOV;
-      camera.updateProjectionMatrix();
+      updateCameraProjection();
       selectEditorObject(editor.selected?.id || "television");
       return;
     }
@@ -2001,8 +2015,7 @@ export function createRoomScene(container, projects = []) {
       camera.position.set(-7.2, 5.6, 1.4);
       camera.lookAt(1.2, 1.7, -2.0);
     }
-    camera.fov = CAMERA_FOV;
-    camera.updateProjectionMatrix();
+    updateCameraProjection();
   }
 
   function createRoomEditor() {
@@ -2082,8 +2095,7 @@ export function createRoomScene(container, projects = []) {
   const pointer = { x: 0, y: 0 };
   function resize() {
     renderer.setSize(container.clientWidth, container.clientHeight, false);
-    camera.aspect = container.clientWidth / Math.max(1, container.clientHeight);
-    camera.updateProjectionMatrix();
+    updateCameraProjection();
     composer.setSize(container.clientWidth, container.clientHeight);
     outlinePass.resolution.set(container.clientWidth, container.clientHeight);
     if (activeRoomScreenProject) drawRoomScreen(activeRoomScreenProject, activeRoomScreenEjected);
