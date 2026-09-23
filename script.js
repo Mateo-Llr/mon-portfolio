@@ -138,14 +138,15 @@ async function scheduleThreeSceneInitialization() {
       "Startup sequence . Running"
     ];
     const terminalTyping = (async () => {
-      for (const line of terminalLines) {
+      for (const [lineIndex, line] of terminalLines.entries()) {
         const lineElement = document.createElement("div");
-        lineElement.className = "startup-loader-log-line";
+        lineElement.className = "startup-loader-log-line is-active";
         startupLoaderLog.appendChild(lineElement);
         for (const character of line) {
           lineElement.textContent += character;
           await new Promise((resolve) => window.setTimeout(resolve, 8 + Math.random() * 6));
         }
+        if (lineIndex < terminalLines.length - 1) lineElement.classList.remove("is-active");
         await new Promise((resolve) => window.setTimeout(resolve, 50));
       }
     })();

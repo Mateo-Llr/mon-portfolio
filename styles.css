@@ -30,7 +30,8 @@ button { cursor: pointer; }
 .startup-loader-kicker, #startupLoaderProgress { color: rgba(114, 255, 155, .86); font: 400 16px/1 "DinaB", monospace; letter-spacing: 0; }
 .startup-loader-inner strong { color: #72ff9b; font: 400 20px/1 "DinaB", monospace; letter-spacing: 0; text-shadow: 0 0 8px rgba(114, 255, 155, .55); }
 .startup-loader-log { min-height: 176px; margin: 12px 0 4px; color: rgba(114, 255, 155, .84); font: 400 14px/1.35 "DinaB", monospace; white-space: pre-wrap; text-shadow: 0 0 6px rgba(114, 255, 155, .32); }
-.startup-loader-log-line::after { content: "_"; animation: terminal-cursor .72s steps(2, end) infinite; }
+.startup-loader-log-line::after { content: none; }
+.startup-loader-log-line.is-active::after { content: "_"; animation: terminal-cursor .72s steps(2, end) infinite; }
 .startup-loader-track { width: 240px; height: 14px; margin-top: 12px; overflow: hidden; border: 2px solid rgba(114, 255, 155, .72); background: repeating-linear-gradient(90deg, transparent 0 7px, rgba(114, 255, 155, .18) 8px 10px); }
 .startup-loader-track span { display: block; width: 0; height: 100%; background: #72ff9b; box-shadow: 0 0 9px rgba(114, 255, 155, .8); transition: width .25s ease; }
 @keyframes terminal-cursor { 50% { opacity: 0; } }
