@@ -6,7 +6,7 @@ export function createCassetteModels(stage, projects) {
   const textureLoader = new THREE.TextureLoader();
   const modelObjects = [];
   let previousRenderTime = 0;
-  const cassetteAngles = [0.08, -0.12, 0.18];
+  const cassetteAngles = [0.08, -0.12, 0.18, -0.06];
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1.25, 1.25, 1.05, -1.05, 0.1, 100);
   camera.position.set(1.5, 0.66, 2.65);
@@ -20,7 +20,11 @@ export function createCassetteModels(stage, projects) {
   keyLight.position.set(2, 4, 3);
   scene.add(keyLight);
 
-  const cassetteTexturePaths = ["textures/cassettes/vhs.png"];
+  const cassetteTexturePaths = [
+    "textures/cassettes/cassette-jaune.png",
+    "textures/cassettes/cassette-orange.png",
+    "textures/cassettes/cassette-violette.png"
+  ];
   const cassetteTextures = cassetteTexturePaths.map((path) => {
     const texture = textureLoader.load(path);
     texture.colorSpace = THREE.SRGBColorSpace;

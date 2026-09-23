@@ -20,29 +20,38 @@
   },
   "cassette-1": {
     "position": {
-      "x": 8.903,
-      "y": 0,
-      "z": -4.085
+      "x": 10.42,
+      "y": 0.34,
+      "z": -4.08
     },
-    "rotationY": -4.6,
+    "rotationY": -2.3,
     "scale": 0.96
   },
   "cassette-2": {
     "position": {
-      "x": 8.876,
-      "y": 0.12,
-      "z": -4.083
+      "x": 11.18,
+      "y": 0.34,
+      "z": -4.08
     },
-    "rotationY": -23,
+    "rotationY": 2.3,
     "scale": 0.96
   },
   "cassette-3": {
     "position": {
-      "x": 9.016,
-      "y": 0.24,
-      "z": -4.026
+      "x": 10.42,
+      "y": 1.21,
+      "z": -4.08
     },
-    "rotationY": -47,
+    "rotationY": -1.7,
+    "scale": 0.96
+  },
+  "cassette-4": {
+    "position": {
+      "x": 11.18,
+      "y": 1.21,
+      "z": -4.08
+    },
+    "rotationY": 1.7,
     "scale": 0.96
   },
   "kitchen": {

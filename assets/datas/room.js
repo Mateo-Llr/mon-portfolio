@@ -1615,6 +1615,18 @@ export function createRoomScene(container, projects = []) {
   function loadRoomProps() {
     const textureLoader = new THREE.TextureLoader();
     const televisionTexture = textureLoader.load("assets/textures/television.png");
+    const cassetteTextures = [
+      "assets/textures/cassettes/cassette-jaune.png",
+      "assets/textures/cassettes/cassette-orange.png",
+      "assets/textures/cassettes/cassette-violette.png"
+    ].map((path) => {
+      const texture = textureLoader.load(path);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.NearestFilter;
+      texture.anisotropy = 1;
+      return texture;
+    });
     televisionTexture.colorSpace = THREE.SRGBColorSpace;
     televisionTexture.magFilter = THREE.NearestFilter;
     televisionTexture.minFilter = THREE.NearestFilter;
@@ -1666,11 +1678,19 @@ export function createRoomScene(container, projects = []) {
 
     onVisible(container, () => onIdle(() => {
       loadSharedModel("assets/models/Cassette.mtl", "assets/models/Cassette.obj").then((template) => {
+        const cassettePositions = [
+          [10.42, 0.34, -4.08],
+          [11.18, 0.34, -4.08],
+          [10.42, 1.21, -4.08],
+          [11.18, 1.21, -4.08]
+        ];
+        const cassetteRotations = [-0.04, 0.04, -0.03, 0.03];
         projects.forEach((project, index) => {
           const rawCassette = template.clone();
           const cassette = centerModelPivot(rawCassette);
-          cassette.position.set(4.65 + index * 0.12, 0.24 + index * 0.12, -4.2 - index * 0.08);
-          cassette.rotation.set(0, [-0.08, 0.12, -0.05][index] || 0, 0);
+          const [x, y, z] = cassettePositions[index] || cassettePositions[cassettePositions.length - 1];
+          cassette.position.set(x, y, z);
+          cassette.rotation.set(0, cassetteRotations[index] || 0, 0);
           cassette.scale.setScalar(0.96);
           applyConfiguredPosition(`cassette-${index + 1}`, cassette);
           rawCassette.traverse((part) => {
@@ -1678,6 +1698,7 @@ export function createRoomScene(container, projects = []) {
             part.castShadow = true;
             part.receiveShadow = true;
             part.material = part.material.clone();
+            part.material.map = cassetteTextures[index % cassetteTextures.length];
             if (part.material.map) {
               part.material.map.magFilter = THREE.NearestFilter;
               part.material.map.minFilter = THREE.NearestFilter;

@@ -12,6 +12,14 @@ projects[2] = {
   content: "<p>Cette rubrique sera complétée au fil de ma formation avec des articles, des sources vérifiées et des notes personnelles.</p><h3>Thèmes suivis</h3><p>Développement web et game dev.</p><h3>Sources</h3><p>Les sources de veille sont encore à définir. Elles seront sélectionnées et comparées avant d'être ajoutées au portfolio.</p><div class=\"sheet-tags\"><span>WEB</span><span>GAME DEV</span><span>VEILLE</span><span>À COMPLÉTER</span></div>"
 };
 
+projects.push({
+  title: "RUST<br>& ROOTS",
+  meta: "JEU VIDÉO + PYTHON&nbsp;&nbsp; / &nbsp;&nbsp;2025—2026",
+  description: "Un jeu d'exploration procédurale créé intégralement en Python pour les Trophées NSI.",
+  lead: "Dans Rust & Roots, un petit robot explore une planète inconnue pour scanner sa faune et sa flore, récupérer des ressources et réparer son vaisseau.",
+  content: "<p>Rust & Roots a été créé intégralement en Python dans le contexte du concours des Trophées NSI 2025—2026, au lycée George Sand.</p><h3>Explorer et réparer</h3><p>Le joueur incarne un petit robot chargé d'étudier les espèces de la planète. Il explore différents biomes, scanne la faune et la flore, récupère des ressources et évite les dangers pour remettre son vaisseau en état.</p><h3>Une planète différente à chaque partie</h3><p>Le jeu utilise de la génération procédurale pour renouveler l'exploration et créer des environnements imprévisibles. Cette approche donne au projet sa dimension d'aventure et d'expérimentation.</p><h3>Un projet récompensé</h3><p>Le projet a reçu le Prix de l'Originalité à l'échelle régionale dans le cadre du concours.</p><div class=\"sheet-gallery\"><img src=\"assets/projects/rust_and_roots/rust_and_roots_1.png\" alt=\"Écran titre de Rust & Roots\"><img src=\"assets/projects/rust_and_roots/rust_and_roots_2.png\" alt=\"Exploration d'un biome dans Rust & Roots\"><img src=\"assets/projects/rust_and_roots/rust_and_roots_3.png\" alt=\"Menu principal de Rust & Roots\"><img src=\"assets/projects/rust_and_roots/rust_and_roots_4.png\" alt=\"Personnages et créatures de Rust & Roots\"></div><div class=\"sheet-tags\"><span>PYTHON</span><span>GÉNÉRATION PROCÉDURALE</span><span>EXPLORATION</span><span>PRIX DE L'ORIGINALITÉ</span></div>"
+});
+
 const DESIGN_WIDTH = 1280;
 const DESIGN_HEIGHT = 720;
 
