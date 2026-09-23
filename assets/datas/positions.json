@@ -354,5 +354,14 @@
     },
     "rotationY": -54,
     "scale": 0.96
+  },
+  "my-photo": {
+    "position": {
+      "x": -2.6,
+      "y": 4.25,
+      "z": -6.038
+    },
+    "rotationY": 0,
+    "scale": 1.5
   }
 }

@@ -703,6 +703,9 @@ export function createRoomScene(container, projects = []) {
     refreshEditorObjectOptions();
     getEditorObjects().forEach(({ id, object }) => applyConfiguredPosition(id, object));
     addCorkBoard(scene);
+    addMyPhoto(scene);
+    addSlamWallInfo(scene);
+    refreshEditorObjectOptions();
     markShadowsDirty();
   }, { timeout: 700 }));
 
@@ -918,6 +921,8 @@ export function createRoomScene(container, projects = []) {
   let projectsFocusReached = false;
   let projectsFocusHandler = null;
   let projectsFocusRequested = false;
+  let aboutPhotoWasVisible = false;
+  let aboutPhotoRevealStartedAt = 0;
 
   function notifyProjectsFocusReached() {
     if (projectsFocusReached) return;
@@ -1079,10 +1084,11 @@ export function createRoomScene(container, projects = []) {
   function refreshCameraPositionSelect() {
     const select = document.querySelector("#editor-camera-position");
     if (!select) return;
-    const visibleCameraIndexes = [2, 3, 4, 5, 9];
-    const options = visibleCameraIndexes
-      .filter((index) => configuredCameraPositions[index])
-      .map((index) => `<option value="${index}">${getCameraPositionLabel(index)}</option>`)
+    const cameraIndexes = configuredCameraPositions
+      .map((position, index) => position ? index : null)
+      .filter((index) => index !== null);
+    const options = cameraIndexes
+      .map((index) => `<option value="${index}">${getCameraPositionLabel(index) || `Caméra ${index + 1} — Position enregistrée`}</option>`)
       .join("");
     select.innerHTML = `<option value="">Position enregistrée...</option>${options}`;
   }
@@ -1137,8 +1143,14 @@ export function createRoomScene(container, projects = []) {
 
   function overwriteCameraPosition() {
     const select = document.querySelector("#editor-camera-position");
+    if (!select) return;
     const index = Number(select?.value);
-    if (!select || !Number.isInteger(index) || !configuredCameraPositions[index]) return;
+    if (!Number.isInteger(index) || !configuredCameraPositions[index]) {
+      saveCameraPosition();
+      const status = document.querySelector("#roomEditorStatus");
+      if (status) status.textContent = "Nouvelle position caméra enregistrée.";
+      return;
+    }
     configuredCameraPositions[index] = {
       position: { x: Number(camera.position.x.toFixed(3)), y: Number(camera.position.y.toFixed(3)), z: Number(camera.position.z.toFixed(3)) },
       rotation: { x: Number(editor.pitch.toFixed(4)), y: Number(editor.yaw.toFixed(4)) }
@@ -1552,6 +1564,119 @@ export function createRoomScene(container, projects = []) {
     return boardGroup;
   }
 
+  function addMyPhoto(scene) {
+    const photoTexture = loadSharedTexture("assets/my_pic.png", { colorSpace: THREE.SRGBColorSpace });
+    photoTexture.magFilter = THREE.LinearFilter;
+    photoTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    photoTexture.anisotropy = 1;
+
+    const photoGroup = furnitureGroup(scene, "my-photo", "Photo de Mateo");
+    const photoFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(0.58, 0.78, 0.05),
+      material(0x332a25, 0.72)
+    );
+    photoFrame.position.set(8.35, 4.25, -5.68);
+    photoGroup.add(photoFrame);
+
+    const photo = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.7),
+      new THREE.MeshStandardMaterial({ map: photoTexture, roughness: 0.78, metalness: 0, side: THREE.DoubleSide })
+    );
+    photo.position.set(8.35, 4.25, -5.645);
+    photoGroup.add(photo);
+
+    const photoLabel = createPropLabel("À PROPOS DE MOI", {
+      fontSize: 42,
+      fontWeight: 700,
+      strokeWidth: 2,
+      width: 1.32,
+      height: 0.16,
+      canvasWidth: 900,
+      canvasHeight: 110,
+      backgroundColor: "transparent",
+      textColor: "#ffffff",
+      outlineColor: "#111713"
+    });
+    photoLabel.name = "my-photo-label";
+    photoLabel.position.set(8.35, 4.78, -5.64);
+    photoGroup.add(photoLabel);
+
+    const photoReturnLabel = createPropLabel("RETOUR", {
+      fontSize: 42,
+      fontWeight: 700,
+      strokeWidth: 2,
+      width: 0.72,
+      height: 0.16,
+      canvasWidth: 520,
+      canvasHeight: 110,
+      backgroundColor: "transparent",
+      textColor: "#ffffff",
+      outlineColor: "#111713"
+    });
+    photoReturnLabel.name = "my-photo-return-label";
+    photoReturnLabel.position.set(8.35, 3.72, -5.64);
+    photoReturnLabel.visible = false;
+    photoGroup.add(photoReturnLabel);
+
+    centerFurniturePivot(photoGroup);
+    photoLabel.userData.revealBaseX = photoLabel.position.x;
+    photoReturnLabel.userData.revealBaseX = photoReturnLabel.position.x;
+    applyConfiguredPosition("my-photo", photoGroup);
+    return photoGroup;
+  }
+
+  function addSlamWallInfo(scene) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 720;
+    canvas.height = 420;
+    const context = canvas.getContext("2d");
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.shadowColor = "rgba(0, 0, 0, .72)";
+    context.shadowBlur = 1;
+    context.lineWidth = 5;
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.strokeStyle = "rgba(7, 15, 14, .96)";
+    const paintText = (text, x, y) => {
+      context.strokeText(text, x, y);
+      context.fillText(text, x, y);
+    };
+    context.fillStyle = "#b9e8dc";
+    context.font = "700 48px 'Space Grotesk', sans-serif";
+    paintText("PARCOURS SLAM", 38, 72);
+    context.fillStyle = "#4fc1bb";
+    context.font = "500 18px 'DM Mono', monospace";
+    paintText("FORMATION + OBJECTIF  /  2026", 40, 108);
+    context.fillStyle = "#eee9d8";
+    context.font = "400 22px 'Space Grotesk', sans-serif";
+    const lines = [
+      "Première année de BTS SIO option SLAM,",
+      "en Centre-Val-de-Loire.",
+      "",
+      "Un parcours en construction vers le métier",
+      "de développeur informatique."
+    ];
+    lines.forEach((line, index) => paintText(line, 40, 164 + index * 32));
+    context.fillStyle = "#91aaa4";
+    context.font = "500 17px 'DM Mono', monospace";
+    paintText("DÉVELOPPEMENT WEB  ·  GAME DEV  ·  SLAM", 40, 370);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    const panel = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.55, 0.9),
+      new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthTest: false, depthWrite: false })
+    );
+    panel.position.set(9.55, 4.25, -5.58);
+    panel.name = "slam-wall-info";
+    panel.renderOrder = 100;
+    panel.visible = false;
+    scene.add(panel);
+    return panel;
+  }
+
   function createWorldTitleLabel() {
     const titleGroup = new THREE.Group();
     titleGroup.name = "world-title-label";
@@ -1808,6 +1933,7 @@ export function createRoomScene(container, projects = []) {
       { id: "cup", label: "Tasse", object: roomCup },
       { id: "laptop", label: "Laptop", object: roomLaptop },
       { id: "cork-board", label: "Tableau en liège", object: scene.getObjectByName("cork-board") },
+      { id: "my-photo", label: "Photo de Mateo", object: scene.getObjectByName("my-photo") },
       { id: "scratch-trophy", label: "Trophée Scratch", object: scene.getObjectByName("scratch-trophy") },
       { id: "python-trophy", label: "Trophée Python", object: scene.getObjectByName("python-trophy") },
       { id: "csharp-trophy", label: "Trophée C#", object: scene.getObjectByName("csharp-trophy") },
@@ -1998,6 +2124,13 @@ export function createRoomScene(container, projects = []) {
     const shelfReturnButton = scene.getObjectByName("shelf-return-button");
     const shelfSkillsLabel = scene.getObjectByName("shelf-skills-label");
     const corkBoard = scene.getObjectByName("cork-board");
+    const myPhoto = scene.getObjectByName("my-photo");
+    const myPhotoReturnLabel = scene.getObjectByName("my-photo-return-label");
+    if (activeInteractionCameraIndex === 0) {
+      if (myPhotoReturnLabel) interactiveObjects.push(myPhotoReturnLabel);
+    } else if (myPhoto) {
+      interactiveObjects.push(myPhoto);
+    }
     if (activeInteractionCameraIndex === 2) {
       if (roomCup) interactiveObjects.push(roomCup);
       if (roomLaptop) interactiveObjects.push(roomLaptop);
@@ -2029,6 +2162,8 @@ export function createRoomScene(container, projects = []) {
       let hitObject = hit.object;
       while (hitObject) {
         if (hitObject.name === "plant-return-label") return { type: "return-main" };
+        if (hitObject.name === "my-photo-return-label") return { type: "about-return" };
+        if (hitObject.name === "my-photo" || hitObject.name === "my-photo-label") return { type: "about-me" };
         if (hitObject.name === "shelf-return-button") return { type: "return-salon", highlightObject: hitObject };
         if (hitObject.name === "projects-label") return { type: "projects" };
         if (hitObject.name === "shelf-model" || hitObject.name === "shelf-skills-label") return { type: "camera", index: 5 };
@@ -2067,6 +2202,8 @@ export function createRoomScene(container, projects = []) {
     if (!interaction) return null;
     if (interaction.highlightObject) return interaction.highlightObject;
     if (interaction.type === "cassette") return roomCassettes[interaction.index] || null;
+    if (interaction.type === "about-me") return scene.getObjectByName("my-photo") || null;
+    if (interaction.type === "about-return") return scene.getObjectByName("my-photo-return-label") || null;
     if (interaction.type === "television" || interaction.type === "television-action") return roomTelevision;
     if (interaction.type === "cup") return roomCup;
     if (interaction.type === "laptop") return roomLaptop;
@@ -2181,6 +2318,14 @@ export function createRoomScene(container, projects = []) {
     const interaction = getRoomInteraction(event);
     if (!interaction) return;
     if (interaction.type === "cassette") roomCassetteSelectHandler?.(interaction.index);
+    if (interaction.type === "about-return") {
+      focusOnInitialView();
+      return;
+    }
+    if (interaction.type === "about-me") {
+      focusOnCameraIndex(0);
+      return;
+    }
     if (interaction.type === "television") roomTelevisionHandler?.();
     if (interaction.type === "television-action") roomTelevisionActionHandler?.(interaction.action);
     if (interaction.type === "cup") roomCupHandler?.();
@@ -2208,6 +2353,52 @@ export function createRoomScene(container, projects = []) {
       roomTrophySelectHandler?.(interaction.name);
     }
   }
+
+  function drawAboutPhotoLabel(label, characterCount) {
+    const texture = label?.material?.map;
+    const canvas = texture?.image;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    const text = "À PROPOS DE MOI";
+    const visibleText = text.slice(0, characterCount);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#ffffff";
+    context.font = "700 42px 'Space Grotesk', sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.lineWidth = 2;
+    context.strokeStyle = "#111713";
+    context.strokeText(visibleText, canvas.width / 2, canvas.height / 2);
+    context.fillText(visibleText, canvas.width / 2, canvas.height / 2);
+    texture.needsUpdate = true;
+  }
+
+  function updateAboutPhotoPresentation(time) {
+    const photoLabel = scene.getObjectByName("my-photo-label");
+    const photoReturnLabel = scene.getObjectByName("my-photo-return-label");
+    const slamWallInfo = scene.getObjectByName("slam-wall-info");
+    const photoGroup = scene.getObjectByName("my-photo");
+    const isAboutView = activeInteractionCameraIndex === 0;
+    if (isAboutView && !aboutPhotoWasVisible) aboutPhotoRevealStartedAt = time;
+    aboutPhotoWasVisible = isAboutView;
+    const revealProgress = isAboutView ? THREE.MathUtils.clamp((time - aboutPhotoRevealStartedAt) / 900, 0, 1) : 1;
+    const revealEase = 1 - Math.pow(1 - revealProgress, 3);
+    if (photoLabel) {
+      photoLabel.visible = true;
+      drawAboutPhotoLabel(photoLabel, isAboutView ? Math.ceil("À PROPOS DE MOI".length * revealEase) : "À PROPOS DE MOI".length);
+    }
+    if (photoReturnLabel) {
+      photoReturnLabel.visible = isAboutView;
+    }
+    if (slamWallInfo) {
+      slamWallInfo.visible = isAboutView;
+      slamWallInfo.material.opacity = isAboutView ? revealEase : 0;
+      if (photoGroup) {
+        slamWallInfo.position.set(photoGroup.position.x + 1.2, photoGroup.position.y, photoGroup.position.z + 0.065);
+      }
+    }
+  }
+
   function render(time) {
     const deltaTime = Math.min(0.05, (time - (render.previousTime || time)) / 1000);
     render.previousTime = time;
@@ -2239,6 +2430,7 @@ export function createRoomScene(container, projects = []) {
     }
     updateCassetteDragRotation(deltaTime);
     updateCassetteReturns(time);
+    updateAboutPhotoPresentation(time);
     updateTrophyShowcaseTransition();
     updateTrophyShowcaseTilt();
     composer.render();

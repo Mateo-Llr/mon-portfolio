@@ -5,6 +5,7 @@ const projects = [
 ];
 
 projects.splice(2, 1);
+projects.splice(1, 1);
 
 projects.push({
   title: "RUST<br>& ROOTS",
@@ -131,7 +132,7 @@ function handleTelevisionClick() {
 
 async function scheduleThreeSceneInitialization() {
   try {
-    const { createRoomScene } = await import("./assets/datas/room.js?v=responsive-project-screen-17");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=plain-wall-text-smooth-35");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);
