@@ -253,7 +253,7 @@ function addShelf(scene, shelves, x, y, z, withInteractiveContent = true, object
   const group = furnitureGroup(scene, objectId, objectId === "shelf" ? "Étagère" : "Deuxième étagère");
   group.position.set(x, y, z);
 
-  loadSharedModel("assets/models/furniture/shelf.mtl", "assets/models/furniture/shelf.obj").then((template) => {
+    loadSharedModel("assets/models/furniture/shelf.mtl", "assets/models/furniture/shelf.obj").then((template) => {
     const model = template.clone();
     model.name = "shelf-model";
     fitModelToHeight(model, 5.1);
@@ -939,6 +939,7 @@ export function createRoomScene(container, projects = []) {
     outlinePass.selectedObjects = trophy ? [trophy] : [];
   }
   let cameraTransition = null;
+  let introTransitionPending = false;
   let activeInteractionCameraIndex = 2;
   let projectsFocusReached = false;
   let projectsFocusHandler = null;
@@ -1172,8 +1173,9 @@ export function createRoomScene(container, projects = []) {
   function overwriteCameraPosition() {
     const select = document.querySelector("#editor-camera-position");
     if (!select) return;
-    const index = Number(select?.value);
-    if (!Number.isInteger(index) || !configuredCameraPositions[index]) {
+    const selectedValue = select.value;
+    const index = Number(selectedValue);
+    if (!selectedValue || !Number.isInteger(index) || !configuredCameraPositions[index]) {
       saveCameraPosition();
       const status = document.querySelector("#roomEditorStatus");
       if (status) status.textContent = "Nouvelle position caméra enregistrée.";
@@ -1232,6 +1234,21 @@ export function createRoomScene(container, projects = []) {
     projectsFocusRequested = false;
     activeInteractionCameraIndex = 2;
     focusCameraPose(presentationCamera);
+  }
+
+  function startIntroTransition() {
+    const introCamera = configuredCameraPositions[1];
+    if (!introCamera || editor.active) {
+      focusOnInitialView();
+      return;
+    }
+    activeInteractionCameraIndex = 1;
+    camera.position.set(introCamera.position.x, introCamera.position.y, introCamera.position.z);
+    editor.pitch = introCamera.rotation.x;
+    editor.yaw = introCamera.rotation.y;
+    applyCameraRotation();
+    cameraTransition = null;
+    introTransitionPending = true;
   }
 
   function focusOnAchievements() {
@@ -2471,7 +2488,7 @@ export function createRoomScene(container, projects = []) {
           cameraTransition = null;
           notifyProjectsFocusReached();
         }
-      } else if (presentationCameraPose) {
+      } else if (presentationCameraPose && !introTransitionPending) {
         applyPresentationCamera();
       } else if (!showcasedTrophyName) {
         const targetX = -8.4 + pointer.x * 0.42;
@@ -2487,6 +2504,10 @@ export function createRoomScene(container, projects = []) {
     updateTrophyShowcaseTransition();
     updateTrophyShowcaseTilt();
     composer.render();
+    if (introTransitionPending) {
+      introTransitionPending = false;
+      focusOnInitialView();
+    }
     requestAnimationFrame(render);
   }
 
@@ -2669,9 +2690,18 @@ export function createRoomScene(container, projects = []) {
   renderer.domElement.addEventListener("pointerup", () => { editor.dragging = false; });
   renderer.domElement.addEventListener("pointercancel", () => { editor.dragging = false; });
   loadRoomProps();
-  loadConfiguredPositions().then(() => requestAnimationFrame(render));
+  const ready = loadConfiguredPositions().then(() => new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const compile = renderer.compileAsync
+        ? renderer.compileAsync(scene, camera)
+        : Promise.resolve().then(() => renderer.compile(scene, camera));
+      Promise.resolve(compile).catch(() => {}).then(resolve);
+    }));
+  }));
+  ready.then(() => requestAnimationFrame(render));
 
   return {
+    ready,
     updateScreen(project, isEjected = false) {
       drawRoomScreen(project, isEjected);
     },
@@ -2723,6 +2753,7 @@ export function createRoomScene(container, projects = []) {
     },
     focusOnProjects,
     focusOnInitialView,
+    startIntroTransition,
     focusOnAchievements,
     focusOnCameraIndex
   };

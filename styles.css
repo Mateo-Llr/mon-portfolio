@@ -16,10 +16,24 @@
 }
 
 * { box-sizing: border-box; }
+@font-face { font-family: "DinaB"; src: url("assets/DinaB.ttf") format("truetype"); font-display: swap; }
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 body { background: var(--paper); color: var(--ink); font-family: var(--display); }
 button, a { font: inherit; }
 button { cursor: pointer; }
+
+.startup-loader { position: fixed; inset: 0; z-index: 100; display: block; overflow: hidden; background: #020403; color: #72ff9b; font-family: "DinaB", monospace; }
+.startup-loader.is-ready { opacity: 0; visibility: hidden; pointer-events: none; }
+.startup-loader-inner { position: relative; width: min(720px, calc(100vw - 48px)); padding: 28px 24px; display: grid; gap: 2px; transition: opacity .22s ease; }
+.startup-loader::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .12; background: repeating-linear-gradient(0deg, transparent 0 3px, #72ff9b 4px); }
+.startup-loader::after { content: ""; position: absolute; inset: -8%; pointer-events: none; background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, .7) 100%); }
+.startup-loader-kicker, #startupLoaderProgress { color: rgba(114, 255, 155, .86); font: 400 16px/1 "DinaB", monospace; letter-spacing: 0; }
+.startup-loader-inner strong { color: #72ff9b; font: 400 20px/1 "DinaB", monospace; letter-spacing: 0; text-shadow: 0 0 8px rgba(114, 255, 155, .55); }
+.startup-loader-log { min-height: 176px; margin: 12px 0 4px; color: rgba(114, 255, 155, .84); font: 400 14px/1.35 "DinaB", monospace; white-space: pre-wrap; text-shadow: 0 0 6px rgba(114, 255, 155, .32); }
+.startup-loader-log-line::after { content: "_"; animation: terminal-cursor .72s steps(2, end) infinite; }
+.startup-loader-track { width: 240px; height: 14px; margin-top: 12px; overflow: hidden; border: 2px solid rgba(114, 255, 155, .72); background: repeating-linear-gradient(90deg, transparent 0 7px, rgba(114, 255, 155, .18) 8px 10px); }
+.startup-loader-track span { display: block; width: 0; height: 100%; background: #72ff9b; box-shadow: 0 0 9px rgba(114, 255, 155, .8); transition: width .25s ease; }
+@keyframes terminal-cursor { 50% { opacity: 0; } }
 
 .studio { min-height: 100dvh; position: relative; overflow: hidden; background: var(--paper); isolation: isolate; }
 .studio::before { content: ""; position: absolute; inset: 0; z-index: -4; background: #202823; }

@@ -5,6 +5,28 @@ import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 const cache = new Map();
 const textureCache = new Map();
 const pixelDataCache = new Map();
+const modelQueue = [];
+let activeModelLoads = 0;
+const modelLoadListeners = new Set();
+
+function notifyModelLoadProgress() {
+  const queued = modelQueue.length + activeModelLoads;
+  modelLoadListeners.forEach((listener) => listener({ queued, active: activeModelLoads }));
+}
+
+function processModelQueue() {
+  if (activeModelLoads > 0 || modelQueue.length === 0) return;
+
+  const { key, load } = modelQueue.shift();
+  activeModelLoads += 1;
+  notifyModelLoadProgress();
+  load()
+    .finally(() => {
+      activeModelLoads -= 1;
+      notifyModelLoadProgress();
+      processModelQueue();
+    });
+}
 
 // Loads (and parses) a given .mtl/.obj pair only once, no matter how many
 // scenes ask for it. Every caller gets the same promise and should call
@@ -15,25 +37,35 @@ const pixelDataCache = new Map();
 export function loadSharedModel(mtlPath, objPath) {
   const key = `${mtlPath}|${objPath}`;
   if (!cache.has(key)) {
-    cache.set(
-      key,
-      new Promise((resolve, reject) => {
-        const materialLoader = new MTLLoader();
-        materialLoader.load(
-          mtlPath,
-          (materials) => {
-            materials.preload();
-            const objectLoader = new OBJLoader();
-            objectLoader.setMaterials(materials);
-            objectLoader.load(objPath, resolve, undefined, reject);
-          },
-          undefined,
-          reject
-        );
-      })
-    );
+    const promise = new Promise((resolve, reject) => {
+      modelQueue.push({
+        key,
+        load: () => new Promise((loadResolve, loadReject) => {
+          const materialLoader = new MTLLoader();
+          materialLoader.load(
+            mtlPath,
+            (materials) => {
+              materials.preload();
+              const objectLoader = new OBJLoader();
+              objectLoader.setMaterials(materials);
+              objectLoader.load(objPath, loadResolve, undefined, loadReject);
+            },
+            undefined,
+            loadReject
+          );
+        }).then(resolve, reject)
+      });
+      processModelQueue();
+    });
+    cache.set(key, promise);
+    notifyModelLoadProgress();
   }
   return cache.get(key);
+}
+
+export function onModelLoadProgress(listener) {
+  modelLoadListeners.add(listener);
+  return () => modelLoadListeners.delete(listener);
 }
 
 // Runs `callback` when the browser has a spare moment, falling back to a

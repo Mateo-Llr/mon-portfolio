@@ -84,6 +84,10 @@ const trophyPanelTitle = document.querySelector("#trophyPanelTitle");
 const trophyPanelType = document.querySelector("#trophyPanelType");
 const trophyPanelDescription = document.querySelector("#trophyPanelDescription");
 const trophyPanelClose = document.querySelector("[data-close-trophy]");
+const startupLoader = document.querySelector("#startupLoader");
+const startupLoaderBar = document.querySelector("#startupLoaderBar");
+const startupLoaderProgress = document.querySelector("#startupLoaderProgress");
+const startupLoaderLog = document.querySelector("#startupLoaderLog");
 let trophyPanelReturnFocus = null;
 
 let roomScene = {
@@ -123,7 +127,93 @@ function handleTelevisionClick() {
 
 async function scheduleThreeSceneInitialization() {
   try {
-    const { createRoomScene } = await import("./assets/datas/room.js?v=plain-wall-text-smooth-35");
+    const terminalLines = [
+      "Mateo Portfolio System / Boot ROM 01.26",
+      "Memory check ..... OK",
+      "Display adapter .. WebGL",
+      "Asset directory .. Connected",
+      "Scene file ....... room.js",
+      "Model cache ...... Online",
+      "Camera system .... Ready",
+      "Startup sequence . Running"
+    ];
+    const terminalTyping = (async () => {
+      for (const line of terminalLines) {
+        const lineElement = document.createElement("div");
+        lineElement.className = "startup-loader-log-line";
+        startupLoaderLog.appendChild(lineElement);
+        for (const character of line) {
+          lineElement.textContent += character;
+          await new Promise((resolve) => window.setTimeout(resolve, 8 + Math.random() * 6));
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 50));
+      }
+    })();
+    const { loadSharedModel } = await import("./assets/datas/model-cache.js");
+    const modelAssets = [
+      ["assets/models/furniture/shelf.mtl", "assets/models/furniture/shelf.obj"],
+      ["assets/models/furniture/table.mtl", "assets/models/furniture/table.obj"],
+      ["assets/models/television.mtl", "assets/models/television.obj"],
+      ["assets/models/Cassette.mtl", "assets/models/Cassette.obj"],
+      ["assets/models/cup.mtl", "assets/models/cup.obj"],
+      ["assets/models/laptop.mtl", "assets/models/laptop.obj"],
+      ["assets/models/trophies/trophy_scratch.mtl", "assets/models/trophies/trophy_scratch.obj"],
+      ["assets/models/trophies/trophy_python.mtl", "assets/models/trophies/trophy_python.obj"],
+      ["assets/models/trophies/trophy_csharp.mtl", "assets/models/trophies/trophy_csharp.obj"],
+      ["assets/models/trophies/trophy_html.mtl", "assets/models/trophies/trophy_html.obj"],
+      ["assets/models/godot.mtl", "assets/models/godot.obj"],
+      ["assets/models/trophies/trophy_css.mtl", "assets/models/trophies/trophy_css.obj"],
+      ["assets/models/trophies/trophy_javascript.mtl", "assets/models/trophies/trophy_javascript.obj"],
+      ["assets/models/linux_penguin.mtl", "assets/models/linux_penguin.obj"]
+    ];
+    let loadedModels = 0;
+    startupLoader.querySelector("strong").textContent = "Chargement des objets";
+    await Promise.all(modelAssets.map(([mtlPath, objPath]) => loadSharedModel(mtlPath, objPath).then(() => {
+      loadedModels += 1;
+      const progress = Math.round((loadedModels / modelAssets.length) * 60);
+      startupLoaderBar.style.width = `${progress}%`;
+      startupLoaderProgress.textContent = `Chargement ${progress} %`;
+    })));
+
+    const imageAssets = [
+      "assets/textures/wallpaper.png",
+      "assets/textures/skybox.png",
+      "assets/textures/floor_wood.png",
+      "assets/textures/floor_kitchen.png",
+      "assets/textures/television_actions.png",
+      "assets/textures/board.png",
+      "assets/textures/television.png",
+      "assets/textures/cassettes/cassette-jaune.png",
+      "assets/textures/cassettes/cassette-orange.png",
+      "assets/textures/cassettes/cassette-violette.png",
+      "assets/textures/cassettes/vhs.png",
+      "assets/textures/icons/contact.png",
+      "assets/textures/icons/vscode.png",
+      "assets/textures/icons/github.png",
+      "assets/textures/icons/blockbench.png",
+      "assets/textures/icons/case.png"
+    ];
+    startupLoader.querySelector("strong").textContent = "Chargement des textures";
+    let loadedImages = 0;
+    await Promise.all(imageAssets.map((path) => new Promise((resolve) => {
+      const image = new Image();
+      const finish = () => {
+        loadedImages += 1;
+        const progress = 60 + Math.round((loadedImages / imageAssets.length) * 18);
+        startupLoaderBar.style.width = `${progress}%`;
+        startupLoaderProgress.textContent = `Chargement ${progress} %`;
+        resolve();
+      };
+      image.onload = finish;
+      image.onerror = finish;
+      image.src = path;
+    })));
+
+    await terminalTyping;
+    startupLoader.querySelector("strong").textContent = "Construction de la scène 3D";
+    startupLoaderBar.style.width = "78%";
+    startupLoaderProgress.textContent = "Chargement 78 %";
+    const { createRoomScene } = await import("./assets/datas/room.js?v=plain-wall-text-smooth-38");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);
@@ -135,8 +225,48 @@ async function scheduleThreeSceneInitialization() {
     roomScene.setProjectsHandler(() => roomScene.focusOnAchievements());
     roomScene.setTrophySelectHandler((id) => openTrophyPanel(id));
     roomScene.updateScreen(projects[0], true);
+    startupLoader.querySelector("strong").textContent = "Initialisation du rendu WebGL";
+    startupLoaderBar.style.width = "92%";
+    startupLoaderProgress.textContent = "Chargement 92 %";
+    await roomScene.ready;
+
+    await new Promise((resolve) => {
+      const loaderContent = startupLoader.querySelector(".startup-loader-inner");
+      const textNodes = [
+        startupLoader.querySelector(".startup-loader-kicker"),
+        startupLoader.querySelector("strong"),
+        startupLoader.querySelector("#startupLoaderProgress")
+      ];
+      const originalTexts = textNodes.map((node) => node.textContent);
+      let characterIndex = Math.max(...originalTexts.map((text) => text.length));
+      window.setTimeout(() => {
+        const eraseNextCharacter = () => {
+          let hasCharacters = false;
+          textNodes.forEach((node, index) => {
+            const text = originalTexts[index];
+            const visibleLength = Math.max(0, Math.min(text.length, characterIndex));
+            node.textContent = text.slice(0, visibleLength);
+            if (visibleLength > 0) hasCharacters = true;
+          });
+          characterIndex -= 1;
+          if (!hasCharacters) {
+            loaderContent.style.opacity = "0";
+            window.setTimeout(resolve, 220);
+            return;
+          }
+          window.setTimeout(eraseNextCharacter, 20 + Math.random() * 12);
+        };
+        eraseNextCharacter();
+      }, 550);
+    });
+    roomScene.startIntroTransition();
+    startupLoaderBar.style.width = "100%";
+    startupLoaderProgress.textContent = "Chargement 100 %";
+    startupLoader.classList.add("is-ready");
   } catch (error) {
     console.error("Impossible de charger la scène 3D.", error);
+    startupLoader.querySelector("strong").textContent = "Chargement impossible";
+    startupLoaderProgress.textContent = "Actualisez la page";
   }
 }
 

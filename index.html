@@ -8,7 +8,7 @@
     <link rel="icon" href="assets/icon.ico" type="image/x-icon" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css?v=shelf-panel-6" />
     <script>
       const resizeDesignCanvas = () => {
@@ -28,6 +28,15 @@
     </script>
   </head>
   <body>
+    <div class="startup-loader" id="startupLoader" role="status" aria-live="polite">
+      <div class="startup-loader-inner">
+        <span class="startup-loader-kicker">Mateo Leuillier / Portfolio</span>
+        <div class="startup-loader-log" id="startupLoaderLog" aria-hidden="true"></div>
+        <strong id="startupLoaderLabel">PRÉPARATION DE LA PIÈCE</strong>
+        <div class="startup-loader-track" aria-hidden="true"><span id="startupLoaderBar"></span></div>
+        <span id="startupLoaderProgress">Chargement 0 %</span>
+      </div>
+    </div>
     <main class="studio" id="top">
       <div class="room-model" id="roomModel" aria-hidden="true"></div>
       <div class="room-foreground" aria-hidden="true"></div>
