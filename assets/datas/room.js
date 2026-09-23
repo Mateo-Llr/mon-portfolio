@@ -4,6 +4,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { loadSharedModel, onIdle, onVisible, loadSharedTexture, loadSharedPixelData, clearSharedCache } from "./model-cache.js";
+import { drawProjectScreen } from "./screen-renderer.js";
 
 function material(color, roughness = 0.72, metalness = 0) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness });
@@ -49,8 +50,8 @@ function mapScreenUvs(screenMesh) {
   for (let index = 0; index < position.count; index += 1) {
     const x = position.getX(index);
     const y = position.getY(index);
-    uv[index * 2] = (x - bounds.min.x) / size.x;
-    uv[index * 2 + 1] = 1 - (y - bounds.min.y) / size.y;
+    uv[index * 2] = 1 - (x - bounds.min.x) / size.x;
+    uv[index * 2 + 1] = (y - bounds.min.y) / size.y;
   }
 
   geometry.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
@@ -748,7 +749,6 @@ export function createRoomScene(container, projects = []) {
   const screenCanvas = document.createElement("canvas");
   screenCanvas.width = 960;
   screenCanvas.height = 540;
-  const screenContext = screenCanvas.getContext("2d");
   const screenTexture = new THREE.CanvasTexture(screenCanvas);
   screenTexture.colorSpace = THREE.SRGBColorSpace;
   screenTexture.minFilter = THREE.NearestFilter;
@@ -944,7 +944,6 @@ export function createRoomScene(container, projects = []) {
       roomScreenMaterial.emissive = new THREE.Color(0x16221e);
       roomScreenMaterial.emissiveMap = screenTexture;
       roomScreenMaterial.emissiveIntensity = 0.78;
-      addRoomActionHighlight(roomScreenMaterial);
       roomScreenMaterial.needsUpdate = true;
     }
     drawRoomScreen(projects[0] || { title: "SIGNAL", meta: "READY", description: "" }, true);
@@ -961,6 +960,9 @@ export function createRoomScene(container, projects = []) {
   const dayGroundColor = new THREE.Color(0x302d28);
   const roomCassettes = [];
   const cassetteStates = new Map();
+  const cassetteReturnAnimations = new Map();
+  let cassetteDragState = null;
+  let suppressCassetteClick = false;
   const editor = {
     active: false,
     cameraMode: false,
@@ -1261,26 +1263,7 @@ export function createRoomScene(container, projects = []) {
       roomScreenMaterial.needsUpdate = true;
     }
     if (isEjected) return;
-    screenContext.fillStyle = "#16221e";
-    screenContext.fillRect(0, 0, 960, 540);
-    screenContext.fillStyle = "#e8ad45";
-    screenContext.font = "500 22px 'DM Mono', monospace";
-    screenContext.fillText(isEjected ? "NO TAPE / READY" : "PLAY / 01", 54, 50);
-    screenContext.fillStyle = "#f5bc43";
-    screenContext.font = "500 72px 'Space Grotesk', sans-serif";
-    const titleLines = isEjected ? ["SIGNAL", "PAUSE"] : project.title.replace("<br>", " ").split(" ");
-    titleLines.forEach((line, index) => screenContext.fillText(line, 54, 170 + index * 68));
-    screenContext.fillStyle = "#e8ad45";
-    screenContext.fillRect(54, 315, 64, 4);
-    screenContext.font = "500 18px 'DM Mono', monospace";
-    screenContext.fillText(isEjected ? "NO TAPE / READY" : project.meta.replaceAll("&nbsp;", " "), 54, 365);
-    screenContext.fillStyle = "#d9d6bd";
-    screenContext.font = "400 20px 'Space Grotesk', sans-serif";
-    screenContext.fillText(isEjected ? "Insérez une cassette pour découvrir un projet." : project.description, 54, 420);
-    screenContext.globalAlpha = 0.18;
-    screenContext.fillStyle = "#b8c39d";
-    for (let y = 0; y < 540; y += 6) screenContext.fillRect(0, y, 960, 2);
-    screenContext.globalAlpha = 1;
+    drawProjectScreen(screenCanvas, project, Math.max(0, projects.indexOf(project)), isEjected);
     screenTexture.needsUpdate = true;
     televisionGlowBaseIntensity = isEjected ? 1.6 : 4.4;
     if (televisionGlow) televisionGlow.intensity = televisionGlowBaseIntensity;
@@ -1582,20 +1565,28 @@ export function createRoomScene(container, projects = []) {
 
     context.fillStyle = "#f8efe3";
     context.font = "600 150px 'Space Grotesk', sans-serif";
+    context.strokeStyle = "#000000";
+    context.lineWidth = 14;
+    context.lineJoin = "round";
     const lines = ["Bonjour !", "Bienvenue sur mon", "Portfolio"];
     const titleStartY = 155;
     const titleLineGap = 150;
     lines.forEach((line, index) => {
+      context.strokeText(line, canvas.width / 2, titleStartY + index * titleLineGap);
       context.fillText(line, canvas.width / 2, titleStartY + index * titleLineGap);
     });
 
     context.font = "500 34px 'DM Mono', monospace";
     context.letterSpacing = "0.18em";
     context.fillStyle = "rgba(245, 227, 196, 0.92)";
+    context.lineWidth = 5;
+    context.strokeText("MATEO LEUILLIER / BTS SIO SLAM", canvas.width / 2, 640);
     context.fillText("MATEO LEUILLIER / BTS SIO SLAM", canvas.width / 2, 640);
 
     context.font = "500 28px 'DM Mono', monospace";
     context.fillStyle = "rgba(216, 210, 191, 0.9)";
+    context.lineWidth = 4;
+    context.strokeText("CENTRE-VAL-DE-LOIRE / FRANCE", canvas.width / 2, 688);
     context.fillText("CENTRE-VAL-DE-LOIRE / FRANCE", canvas.width / 2, 688);
 
     const texture = new THREE.CanvasTexture(canvas);
@@ -1618,7 +1609,8 @@ export function createRoomScene(container, projects = []) {
     const cassetteTextures = [
       "assets/textures/cassettes/cassette-jaune.png",
       "assets/textures/cassettes/cassette-orange.png",
-      "assets/textures/cassettes/cassette-violette.png"
+      "assets/textures/cassettes/cassette-violette.png",
+      "assets/textures/cassettes/vhs.png"
     ].map((path) => {
       const texture = textureLoader.load(path);
       texture.colorSpace = THREE.SRGBColorSpace;
@@ -2012,7 +2004,7 @@ export function createRoomScene(container, projects = []) {
       if (shelfModel) interactiveObjects.push(shelfModel);
       if (shelfSkillsLabel) interactiveObjects.push(shelfSkillsLabel);
     } else if (activeInteractionCameraIndex === 4) {
-      interactiveObjects.push(...roomCassettes.filter(Boolean));
+      interactiveObjects.push(...roomCassettes.filter((cassette, index) => cassette?.visible && !cassetteStates.get(index)));
       if (roomTelevision) interactiveObjects.push(roomTelevision);
       if (salonReturnPlantLabel) interactiveObjects.push(salonReturnPlantLabel);
     } else if (activeInteractionCameraIndex === 5) {
@@ -2080,6 +2072,81 @@ export function createRoomScene(container, projects = []) {
     return null;
   }
 
+  function getPointerOnCameraPlane(event, origin, target = new THREE.Vector3()) {
+    const bounds = renderer.domElement.getBoundingClientRect();
+    const pointerPosition = new THREE.Vector2(
+      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+      -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+    );
+    editor.raycaster.setFromCamera(pointerPosition, camera);
+    const planeNormal = camera.getWorldDirection(new THREE.Vector3());
+    const cameraPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, origin);
+    return editor.raycaster.ray.intersectPlane(cameraPlane, target) ? target : null;
+  }
+
+  function isTelevisionDrop(event) {
+    if (!roomTelevision) return false;
+    const bounds = renderer.domElement.getBoundingClientRect();
+    const pointerPosition = new THREE.Vector2(
+      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+      -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+    );
+    editor.raycaster.setFromCamera(pointerPosition, camera);
+    return editor.raycaster.intersectObject(roomTelevision, true).length > 0;
+  }
+
+  function getCassetteDragQuaternion(object) {
+    const facingObject = new THREE.Object3D();
+    facingObject.position.copy(object.position);
+    facingObject.lookAt(camera.position);
+    facingObject.rotateX(Math.PI / 2);
+    return facingObject.quaternion.clone();
+  }
+
+  function finishCassetteDrag(event, cancelled = false) {
+    if (!cassetteDragState || cassetteDragState.pointerId !== event.pointerId) return;
+    const { index, object, originalPosition, originalQuaternion, moved } = cassetteDragState;
+    const droppedOnTelevision = !cancelled && isTelevisionDrop(event);
+    cassetteDragState = null;
+    suppressCassetteClick = moved;
+    renderer.domElement.releasePointerCapture?.(event.pointerId);
+    renderer.domElement.style.cursor = "default";
+
+    if (!moved) return;
+
+    if (droppedOnTelevision) {
+      object.position.copy(originalPosition);
+      object.quaternion.copy(originalQuaternion);
+      roomCassetteSelectHandler?.(index);
+      return;
+    }
+
+    cassetteReturnAnimations.set(index, {
+      object,
+      startedAt: performance.now(),
+      from: object.position.clone(),
+      to: originalPosition.clone(),
+      fromQuaternion: object.quaternion.clone(),
+      toQuaternion: originalQuaternion.clone()
+    });
+  }
+
+  function updateCassetteReturns(time) {
+    cassetteReturnAnimations.forEach((animation, index) => {
+      const progress = THREE.MathUtils.clamp((time - animation.startedAt) / 420, 0, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      animation.object.position.lerpVectors(animation.from, animation.to, eased);
+      animation.object.quaternion.slerpQuaternions(animation.fromQuaternion, animation.toQuaternion, eased);
+      if (progress >= 1) cassetteReturnAnimations.delete(index);
+    });
+  }
+
+  function updateCassetteDragRotation(deltaTime) {
+    if (!cassetteDragState?.moved) return;
+    const smoothing = 1 - Math.exp(-deltaTime * 14);
+    cassetteDragState.object.quaternion.slerp(cassetteDragState.dragQuaternion, smoothing);
+  }
+
   function handleRoomPointerMove(event) {
     const interaction = getRoomInteraction(event);
     if (interaction?.type === "television-action") {
@@ -2101,6 +2168,10 @@ export function createRoomScene(container, projects = []) {
   }
 
   function handleRoomClick(event) {
+    if (suppressCassetteClick) {
+      suppressCassetteClick = false;
+      return;
+    }
     const interaction = getRoomInteraction(event);
     if (!interaction) return;
     if (interaction.type === "cassette") roomCassetteSelectHandler?.(interaction.index);
@@ -2160,6 +2231,8 @@ export function createRoomScene(container, projects = []) {
         camera.lookAt(1.4, 1.7, -2.3);
       }
     }
+    updateCassetteDragRotation(deltaTime);
+    updateCassetteReturns(time);
     updateTrophyShowcaseTransition();
     updateTrophyShowcaseTilt();
     composer.render();
@@ -2179,6 +2252,41 @@ export function createRoomScene(container, projects = []) {
     outlinePass.selectedObjects = [];
   });
   renderer.domElement.addEventListener("click", handleRoomClick);
+  renderer.domElement.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || editor.active || cameraTransition || showcasedTrophyName) return;
+    const interaction = getRoomInteraction(event);
+    if (interaction?.type !== "cassette") return;
+    const object = roomCassettes[interaction.index];
+    const startPoint = object ? getPointerOnCameraPlane(event, object.position) : null;
+    if (!object || !startPoint) return;
+    cassetteReturnAnimations.delete(interaction.index);
+    cassetteDragState = {
+      pointerId: event.pointerId,
+      index: interaction.index,
+      object,
+      originalPosition: object.position.clone(),
+      originalQuaternion: object.quaternion.clone(),
+      dragQuaternion: getCassetteDragQuaternion(object),
+      offset: object.position.clone().sub(startPoint),
+      moved: false,
+      startX: event.clientX,
+      startY: event.clientY
+    };
+    renderer.domElement.setPointerCapture(event.pointerId);
+  });
+  renderer.domElement.addEventListener("pointermove", (event) => {
+    if (!cassetteDragState || cassetteDragState.pointerId !== event.pointerId) return;
+    const distance = Math.hypot(event.clientX - cassetteDragState.startX, event.clientY - cassetteDragState.startY);
+    if (distance < 4) return;
+    const point = getPointerOnCameraPlane(event, cassetteDragState.originalPosition);
+    if (!point) return;
+    cassetteDragState.moved = true;
+    cassetteDragState.object.position.copy(point).add(cassetteDragState.offset);
+    renderer.domElement.style.cursor = "grabbing";
+    event.preventDefault();
+  });
+  renderer.domElement.addEventListener("pointerup", (event) => finishCassetteDrag(event));
+  renderer.domElement.addEventListener("pointercancel", (event) => finishCassetteDrag(event, true));
   renderer.domElement.addEventListener("pointerdown", (event) => {
     if (!showcasedTrophyName || editor.active) return;
     const trophy = shelfTrophies.find((entry) => entry.name === showcasedTrophyName);

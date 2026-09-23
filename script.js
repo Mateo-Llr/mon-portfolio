@@ -4,13 +4,7 @@ const projects = [
   { title: "SOUL<br>FRACT", meta: "JEU VIDÉO + UNIVERS&nbsp;&nbsp; / &nbsp;&nbsp;2025", description: "Un jeu de survie et d'exploration où chaque âme porte la mémoire d'un autre monde.", lead: "Soulfract est un jeu de survie, d'exploration et de création dans un monde où les âmes voyagent entre les étoiles.", content: "<p>Les étoiles produisent des âmes, fragments d'une Lumière Primordiale. Lorsqu'une âme trouve un corps, elle se fond à lui et laisse une marque qui influence sa trajectoire.</p><h3>Un monde à choisir</h3><p>Le joueur se réveille dans un corps étranger, avec des souvenirs incomplets. Il peut protéger les âmes, traquer les Ombres, étudier les fusions ou chercher sa propre mission.</p><h3>La fracture</h3><p>Certains êtres abritent plusieurs âmes. Cette puissance exceptionnelle a un prix : l'instabilité, les voix et le risque de devenir une Ombre. Le monde change selon les choix du joueur.</p><div class=\"sheet-tags\"><span>EXPLORATION</span><span>SURVIE</span><span>LORE</span><span>CRÉATION</span></div>" }
 ];
 
-projects[2] = {
-  title: "VEILLE<br>À VENIR",
-  meta: "VEILLE TECHNOLOGIQUE&nbsp;&nbsp; / &nbsp;&nbsp;À COMPLÉTER",
-  description: "Une rubrique dédiée au développement web et au game dev sera bientôt ajoutée.",
-  lead: "Ma veille accompagnera ma progression en développement web et en création de jeux.",
-  content: "<p>Cette rubrique sera complétée au fil de ma formation avec des articles, des sources vérifiées et des notes personnelles.</p><h3>Thèmes suivis</h3><p>Développement web et game dev.</p><h3>Sources</h3><p>Les sources de veille sont encore à définir. Elles seront sélectionnées et comparées avant d'être ajoutées au portfolio.</p><div class=\"sheet-tags\"><span>WEB</span><span>GAME DEV</span><span>VEILLE</span><span>À COMPLÉTER</span></div>"
-};
+projects.splice(2, 1);
 
 projects.push({
   title: "RUST<br>& ROOTS",
@@ -122,12 +116,25 @@ let roomScene = {
 
 let insertedCassetteIndex = null;
 
+function ejectInsertedCassette() {
+  if (insertedCassetteIndex === null) return false;
+  roomScene.setCassetteInserted?.(insertedCassetteIndex, false);
+  roomScene.updateScreen?.(projects[0], true);
+  insertedCassetteIndex = null;
+  closeProjectSheet();
+  return true;
+}
+
+function handleTelevisionClick() {
+  if (!ejectInsertedCassette()) roomScene.focusOnProjects();
+}
+
 async function scheduleThreeSceneInitialization() {
   try {
-    const { createRoomScene } = await import("./assets/datas/room.js?v=important-views-only-2");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=hidden-cassette-hit-test-16");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
-    roomScene.setTelevisionHandler(() => roomScene.focusOnProjects());
-    roomScene.setTelevisionActionHandler(() => roomScene.focusOnProjects());
+    roomScene.setTelevisionHandler(handleTelevisionClick);
+    roomScene.setTelevisionActionHandler(handleTelevisionClick);
     roomScene.onProjectsFocusReached(() => roomScene.activateTelevisionFeatures());
     roomScene.setCassetteSelectHandler((index) => selectProject(index));
     roomScene.setCupHandler(() => roomScene.focusOnCameraIndex(9));

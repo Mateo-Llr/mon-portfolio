@@ -1,89 +1,9 @@
 import * as THREE from "three";
 import { loadSharedModel, onIdle, onVisible, onVisibilityChange, loadSharedTexture, loadSharedPixelData } from "./model-cache.js";
+import { drawProjectScreen } from "./screen-renderer.js";
 
 const SCREEN_WIDTH = 960;
 const SCREEN_HEIGHT = 540;
-
-function drawScreen(canvas, project, index, isEjected = false) {
-  const context = canvas.getContext("2d");
-  context.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-  context.save();
-  context.fillStyle = "#16221e";
-  context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-  context.fillStyle = "#e8ad45";
-  context.font = "500 22px 'DM Mono', monospace";
-  context.letterSpacing = "2px";
-  context.fillText(isEjected ? "NO TAPE / READY" : `PLAY / 0${index + 1}`, 74, 52);
-
-  context.fillStyle = "#f5bc43";
-  context.shadowColor = "rgba(242, 188, 67, .85)";
-  context.shadowBlur = 8;
-  context.font = "500 76px 'Space Grotesk', sans-serif";
-  const title = isEjected ? ["SIGNAL", "PAUSE"] : project.title.replace("<br>", "\n").split("\n");
-  title.forEach((line, lineIndex) => context.fillText(line, 74, 174 + lineIndex * 68));
-
-  context.shadowBlur = 0;
-  context.fillStyle = "#e8ad45";
-  context.fillRect(74, 315, 64, 4);
-  context.font = "500 19px 'DM Mono', monospace";
-  context.fillText(isEjected ? "NO TAPE / READY" : project.meta.replaceAll("&nbsp;", " "), 74, 365);
-
-  context.fillStyle = "#d9d6bd";
-  context.font = "400 20px 'Space Grotesk', sans-serif";
-  const description = isEjected ? "Insérez une cassette pour découvrir un projet." : project.description;
-  const words = description.split(" ");
-  let line = "";
-  let lineIndex = 0;
-  words.forEach((word) => {
-    const candidate = `${line} ${word}`.trim();
-    if (context.measureText(candidate).width > 760 && line) {
-      context.fillText(line, 74, 414 + lineIndex * 23);
-      line = word;
-      lineIndex += 1;
-    } else {
-      line = candidate;
-    }
-  });
-  context.fillText(line, 74, 414 + lineIndex * 23);
-
-  // Apply the CRT character to the texture itself so it follows the curved model screen.
-  context.globalCompositeOperation = "screen";
-  context.globalAlpha = 0.16;
-  context.fillStyle = "#b8c39d";
-  const scanOffset = Math.floor(Date.now() / 90) % 6;
-  for (let y = scanOffset; y < SCREEN_HEIGHT; y += 6) {
-    context.fillRect(0, y, SCREEN_WIDTH, 2);
-  }
-
-  context.globalAlpha = 0.08;
-  context.fillStyle = "#f0c768";
-  context.fillRect(0, (Math.floor(Date.now() / 18) % (SCREEN_HEIGHT + 80)) - 40, SCREEN_WIDTH, 18);
-
-  context.globalAlpha = 0.045;
-  context.fillStyle = "#8ec8b2";
-  for (let x = 0; x < SCREEN_WIDTH; x += 4) {
-    context.fillRect(x, 0, 1, SCREEN_HEIGHT);
-  }
-
-  context.globalCompositeOperation = "source-over";
-  context.globalAlpha = 1;
-  const vignette = context.createRadialGradient(
-    SCREEN_WIDTH / 2,
-    SCREEN_HEIGHT / 2,
-    SCREEN_WIDTH * 0.18,
-    SCREEN_WIDTH / 2,
-    SCREEN_HEIGHT / 2,
-    SCREEN_WIDTH * 0.72
-  );
-  vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
-  vignette.addColorStop(0.72, "rgba(0, 0, 0, 0.12)");
-  vignette.addColorStop(1, "rgba(0, 0, 0, 0.58)");
-  context.fillStyle = vignette;
-  context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-  context.restore();
-}
 
 function mapScreenUvs(screenMesh) {
   const geometry = screenMesh.geometry;
@@ -96,7 +16,7 @@ function mapScreenUvs(screenMesh) {
   for (let index = 0; index < position.count; index += 1) {
     const x = position.getX(index);
     const y = position.getY(index);
-    uv[index * 2] = (x - bounds.min.x) / size.x;
+    uv[index * 2] = 1 - (x - bounds.min.x) / size.x;
     uv[index * 2 + 1] = 1 - (y - bounds.min.y) / size.y;
   }
 
@@ -431,7 +351,7 @@ diffuseColor.rgb += vec3(crtJitter * crtEdge * 0.12);` : ""}`
   function playStaticTransition(projectIndex) {
     const transitionToken = ++screenTransitionToken;
     if (!screenMaterial || !dynamicScreenUvs) {
-      drawScreen(canvas, projects[projectIndex], projectIndex);
+      drawProjectScreen(canvas, projects[projectIndex], projectIndex);
       texture.needsUpdate = true;
       syncFullscreenScreen();
       return;
@@ -446,7 +366,7 @@ diffuseColor.rgb += vec3(crtJitter * crtEdge * 0.12);` : ""}`
     function finishStaticTransition() {
       if (transitionToken !== screenTransitionToken) return;
       cancelAnimationFrame(staticAnimationId);
-      drawScreen(canvas, projects[projectIndex], projectIndex);
+      drawProjectScreen(canvas, projects[projectIndex], projectIndex);
       texture.needsUpdate = true;
       syncFullscreenScreen();
       staticAnimationId = null;
@@ -592,7 +512,7 @@ diffuseColor.rgb += vec3(crtJitter * crtEdge * 0.12);` : ""}`
   function render(time) {
     actionUniforms.crtTime.value = time * 0.001;
     if (cassetteInserted && !staticAnimationId && time - lastScreenDrawAt >= SCREEN_REDRAW_INTERVAL_MS) {
-      drawScreen(canvas, projects[activeProjectIndex], activeProjectIndex);
+      drawProjectScreen(canvas, projects[activeProjectIndex], activeProjectIndex);
       texture.needsUpdate = true;
       lastScreenDrawAt = time;
     }
@@ -628,7 +548,7 @@ diffuseColor.rgb += vec3(crtJitter * crtEdge * 0.12);` : ""}`
     screenTransitionToken += 1;
     cancelAnimationFrame(staticAnimationId);
     clearTimeout(staticTimeoutId);
-    drawScreen(canvas, projects[projectIndex], projectIndex);
+    drawProjectScreen(canvas, projects[projectIndex], projectIndex);
     texture.needsUpdate = true;
     syncFullscreenScreen();
   }
