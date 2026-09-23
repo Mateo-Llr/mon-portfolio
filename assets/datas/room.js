@@ -1834,12 +1834,44 @@ export function createRoomScene(container, projects = []) {
   });
   const editorPanel = createRoomEditor();
   contactTab = createContactTab();
+
+  function isCreatorAccount() {
+    const creatorAliases = ["mateo", "mateoleuillier", "mateo leuillier", "1", "true"];
+    const localCreatorHosts = ["localhost", "127.0.0.1", "::1", "[::1]"];
+    const hostname = window.location.hostname.toLowerCase();
+
+    if (localCreatorHosts.includes(hostname)) {
+      return true;
+    }
+
+    const searchValues = [
+      new URLSearchParams(window.location.search).get("creator"),
+      window.localStorage.getItem("portfolio.creator"),
+      (() => {
+        const cookieEntry = document.cookie
+          .split("; ")
+          .find((entry) => entry.startsWith("portfolio_creator="));
+        return cookieEntry ? cookieEntry.split("=")[1] : null;
+      })(),
+      window.__creatorAccount || null
+    ].filter(Boolean);
+
+    return searchValues.some((value) => {
+      const normalized = String(value).trim().toLowerCase();
+      return creatorAliases.includes(normalized);
+    });
+  }
+
   const editorToggle = document.createElement("button");
   editorToggle.className = "room-editor-toggle";
   editorToggle.type = "button";
   editorToggle.textContent = "ÉDITER LA PIÈCE";
   editorToggle.addEventListener("click", () => setEditorMode(!editor.active));
-  container.parentElement.appendChild(editorToggle);
+
+  if (isCreatorAccount()) {
+    container.parentElement.appendChild(editorToggle);
+  }
+
   renderer.domElement.addEventListener("pointerdown", (event) => {
     if (!editor.active || !editor.selected || event.button !== 0) return;
     const bounds = renderer.domElement.getBoundingClientRect();
