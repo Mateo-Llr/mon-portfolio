@@ -124,7 +124,7 @@ let insertedCassetteIndex = null;
 
 async function scheduleThreeSceneInitialization() {
   try {
-    const { createRoomScene } = await import("./assets/datas/room.js?v=important-views-only-1");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=important-views-only-2");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(() => roomScene.focusOnProjects());
     roomScene.setTelevisionActionHandler(() => roomScene.focusOnProjects());

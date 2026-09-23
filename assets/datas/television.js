@@ -8,8 +8,6 @@ function drawScreen(canvas, project, index, isEjected = false) {
   const context = canvas.getContext("2d");
   context.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   context.save();
-  context.translate(SCREEN_WIDTH, SCREEN_HEIGHT);
-  context.scale(-1, -1);
   context.fillStyle = "#16221e";
   context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
@@ -170,8 +168,6 @@ export function createTelevisionModel(container, projects) {
     fullscreenCanvas.width = canvas.width;
     fullscreenCanvas.height = canvas.height;
     fullscreenContext.save();
-    fullscreenContext.translate(fullscreenCanvas.width, fullscreenCanvas.height);
-    fullscreenContext.scale(-1, -1);
     fullscreenContext.drawImage(canvas, 0, 0);
     fullscreenContext.restore();
   }
