@@ -1,4 +1,8 @@
 import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { loadSharedModel, onIdle, onVisible, loadSharedTexture, loadSharedPixelData, clearSharedCache } from "./model-cache.js";
 
 function material(color, roughness = 0.72, metalness = 0) {
@@ -96,6 +100,25 @@ function centerFurniturePivot(group, pivot = null) {
   return group;
 }
 
+// Wraps a loaded OBJ model (whose own origin sits wherever the .obj file
+// happens to place it - often a corner or a foot, not the visual center) in
+// an outer pivot Group centered on the model's horizontal (X/Z) footprint.
+// Vertical (Y) placement is left untouched so existing "resting height"
+// tuning still applies. Callers should thereafter set position/rotation on
+// the returned pivot (not on the raw model), and add any attached props
+// (labels, lights, glows) to `rawModel` so they keep their position
+// relative to the model's own geometry instead of jumping to the new pivot
+// origin.
+function centerModelPivot(rawModel) {
+  const bounds = new THREE.Box3().setFromObject(rawModel);
+  const center = bounds.getCenter(new THREE.Vector3());
+  center.y = 0;
+  rawModel.position.sub(center);
+  const pivot = new THREE.Group();
+  pivot.add(rawModel);
+  return pivot;
+}
+
 function fitModelToHeight(model, targetHeight) {
   if (!model) return model;
   const bounds = new THREE.Box3().setFromObject(model);
@@ -156,13 +179,52 @@ export function createRoomScene(container, projects = []) {
   let configuredCameraPositions = [];
   let presentationCameraPose = null;
   const scene = new THREE.Scene();
+  window.__roomDebug = { scene, camera: null, editor: null };
   const CAMERA_FOV = 45;
   const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 100);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  const lowPowerDevice = !!(
+    (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)
+    || (navigator.deviceMemory && navigator.deviceMemory <= 4)
+  );
+  const qualityProfile = {
+    lowPower: lowPowerDevice || reducedMotion,
+    pixelRatio: lowPowerDevice ? 0.9 : Math.min(window.devicePixelRatio, 1.15),
+    shadowMapSize: lowPowerDevice ? 1024 : 2048
+  };
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, qualityProfile.pixelRatio));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = !qualityProfile.lowPower;
+  renderer.shadowMap.type = qualityProfile.lowPower ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+
+  // Post-processing pipeline used only to draw the white hover halo around
+  // a trophy's outer silhouette (OutlinePass draws a true silhouette edge
+  // from the object's screen-space shape, not per-polygon lines), so it
+  // renders one clean contour instead of tracing every facet of the model.
+  const composer = new EffectComposer(renderer);
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  const outlinePass = new OutlinePass(new THREE.Vector2(1, 1), scene, camera);
+  outlinePass.edgeStrength = 4;
+  outlinePass.edgeGlow = 0.4;
+  outlinePass.edgeThickness = 1.2;
+  outlinePass.pulsePeriod = 0;
+  outlinePass.visibleEdgeColor.set(0xffffff);
+  outlinePass.hiddenEdgeColor.set(0xffffff);
+  outlinePass.selectedObjects = [];
+  composer.addPass(outlinePass);
+  composer.addPass(new OutputPass());
+
+  // A small anchor parented to the camera itself: anything placed inside it
+  // stays glued to the same spot on screen (front-left, always "in front")
+  // no matter where the camera moves or looks, which is what lets a
+  // showcased trophy stay put in the foreground while the room camera is
+  // otherwise free to keep doing its normal thing behind it.
+  const trophyShowcaseAnchor = new THREE.Object3D();
+  trophyShowcaseAnchor.position.set(-0.9, -0.38, -2.8);
+  camera.add(trophyShowcaseAnchor);
+  scene.add(camera);
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
   function markShadowsDirty() {
@@ -189,12 +251,13 @@ export function createRoomScene(container, projects = []) {
   function attachTrophy(shelfGroup, { id, label, modelPath, objPath, scale = 0.62, position = [0.18, 1.62, -0.08], rotationY = -0.9 }) {
     if (!shelfGroup) return;
     loadSharedModel(modelPath, objPath).then((template) => {
-      const trophy = template.clone();
+      const rawTrophy = template.clone();
+      const trophy = centerModelPivot(rawTrophy);
       trophy.name = id;
       trophy.scale.setScalar(scale);
       trophy.rotation.y = rotationY;
       trophy.position.set(...position);
-      trophy.traverse((part) => {
+      rawTrophy.traverse((part) => {
         if (!part.isMesh) return;
         part.castShadow = true;
         part.receiveShadow = true;
@@ -209,6 +272,7 @@ export function createRoomScene(container, projects = []) {
       });
       shelfGroup.add(trophy);
       applyConfiguredPosition(id, trophy);
+      registerShelfTrophy(trophy);
       refreshEditorObjectOptions();
     }, (error) => console.error(`Impossible de charger le trophée ${label} sur l'étagère.`, error));
   }
@@ -342,12 +406,14 @@ export function createRoomScene(container, projects = []) {
   scene.add(box(23, 0.14, 0.3, trim, [0, 8.6, -5.92]));
   const ceilingLight = new THREE.PointLight(0xffd6a0, 13, 17, 1.6);
   ceilingLight.position.set(0, 8.05, 0.4);
-  ceilingLight.castShadow = true;
-  ceilingLight.shadow.mapSize.set(2048, 2048);
-  ceilingLight.shadow.camera.near = 0.3;
-  ceilingLight.shadow.camera.far = 17;
-  ceilingLight.shadow.bias = -0.00008;
-  ceilingLight.shadow.radius = 24;
+  ceilingLight.castShadow = !qualityProfile.lowPower;
+  if (!qualityProfile.lowPower) {
+    ceilingLight.shadow.mapSize.set(qualityProfile.shadowMapSize, qualityProfile.shadowMapSize);
+    ceilingLight.shadow.camera.near = 0.3;
+    ceilingLight.shadow.camera.far = 17;
+    ceilingLight.shadow.bias = -0.00008;
+    ceilingLight.shadow.radius = 24;
+  }
   scene.add(ceilingLight);
 
   addWindow(scene, -5.7, 4.2, 3.5, 5.1, -6.055, true);
@@ -375,6 +441,7 @@ export function createRoomScene(container, projects = []) {
     addWindow(scene, 4.8, 10, 8.4, 4.25, -6.055, false);
     addKitchen(scene, material(0xd28a2d, 0.78), darkWood);
     addSofaL(scene, upholstery, darkWood);
+    addCoffeeTable(scene, tabletop, darkWood);
     addShelf(scene, [[0xc05262, 0, 0.25], [0x9b4e39, 1, 0], [0xd29b48, 2, 0.1], [0x6f8f6d, 3, 0]], 9.8, 2.6, 5.2);
     const shelf = scene.getObjectByName("shelf");
     attachScratchTrophy(shelf);
@@ -413,8 +480,50 @@ export function createRoomScene(container, projects = []) {
     plantLabel.position.set(0, 0.36, 0.401);
     plantVisual.add(plantLabel);
     getEditorObjects().forEach(({ id, object }) => applyConfiguredPosition(id, object));
+    addCorkBoard(scene);
     markShadowsDirty();
   }, { timeout: 700 }));
+
+  const contactCameraIndex = 9;
+  let contactTab = null;
+
+  function matchesCameraPose(targetPose, candidatePose) {
+    if (!targetPose || !candidatePose) return false;
+    const targetPosition = new THREE.Vector3(targetPose.position.x, targetPose.position.y, targetPose.position.z);
+    const candidatePosition = new THREE.Vector3(candidatePose.position.x, candidatePose.position.y, candidatePose.position.z);
+    const positionDelta = targetPosition.distanceTo(candidatePosition);
+    const rotationDelta = Math.abs(targetPose.rotation.x - candidatePose.rotation.x) + Math.abs(targetPose.rotation.y - candidatePose.rotation.y);
+    return positionDelta < 0.45 && rotationDelta < 0.45;
+  }
+
+  function isOnFirstCameraView() {
+    const firstCameraPose = configuredCameraPositions[0] || presentationCamera;
+    const initialCameraPose = presentationCameraPose || presentationCamera;
+    const currentPose = { position: camera.position.clone(), rotation: { x: editor.pitch, y: editor.yaw } };
+    return matchesCameraPose(currentPose, firstCameraPose) || matchesCameraPose(currentPose, initialCameraPose);
+  }
+
+  function syncContactTabState() {
+    if (!contactTab) return;
+    const visible = isOnFirstCameraView();
+    contactTab.hidden = !visible;
+    contactTab.setAttribute("aria-hidden", String(!visible));
+  }
+
+  function createContactTab() {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "contact-scene-tab";
+    button.textContent = "Contact";
+    button.hidden = true;
+    button.setAttribute("aria-label", "Afficher la vue de contact");
+    button.addEventListener("click", () => {
+      const target = configuredCameraPositions[contactCameraIndex] || configuredCameraPositions[configuredCameraPositions.length - 1] || presentationCamera;
+      if (target) focusOnCameraIndex(contactCameraIndex);
+    });
+    container.parentElement.appendChild(button);
+    return button;
+  }
 
   const windowLights = [
     { position: [-5.7, 5.1, -5.25], intensity: 0.32, target: [-5.7, 1.5, 0.5] },
@@ -423,13 +532,15 @@ export function createRoomScene(container, projects = []) {
     const light = new THREE.SpotLight(0xffe8c2, intensity, 22, 0.62, 0.35, 1.4);
     light.position.set(...position);
     light.target.position.set(...(position[0] < 0 ? [-5.7, 1.5, 0.5] : [4.8, 1.5, 0.5]));
-    light.castShadow = true;
-    light.shadow.mapSize.set(2048, 2048);
-    light.shadow.camera.near = 0.2;
-    light.shadow.camera.far = 22;
-    light.shadow.bias = -0.00004;
-    light.shadow.normalBias = 0.12;
-    light.shadow.radius = 26;
+    light.castShadow = !qualityProfile.lowPower;
+    if (!qualityProfile.lowPower) {
+      light.shadow.mapSize.set(qualityProfile.shadowMapSize, qualityProfile.shadowMapSize);
+      light.shadow.camera.near = 0.2;
+      light.shadow.camera.far = 22;
+      light.shadow.bias = -0.00004;
+      light.shadow.normalBias = 0.12;
+      light.shadow.radius = 26;
+    }
     scene.add(light);
     scene.add(light.target);
     return light;
@@ -449,6 +560,7 @@ export function createRoomScene(container, projects = []) {
   let roomTelevisionFeaturesLoaded = false;
   let roomCup = null;
   let roomLaptop = null;
+  let roomWallPhone = null;
   let roomLaptopHandler = null;
   let televisionGlow = null;
   let roomScreenMaterial = null;
@@ -462,6 +574,147 @@ export function createRoomScene(container, projects = []) {
   let roomCupHandler = null;
   let roomReturnHandler = null;
   let roomProjectsHandler = null;
+  const shelfTrophies = [];
+  let hoveredTrophyName = null;
+  let showcasedTrophyName = null;
+  let showcaseOriginalState = null;
+  let showcaseTransition = null;
+  let showcaseDragState = null;
+  let roomTrophySelectHandler = null;
+  const showcaseTilt = { x: 0, y: 0 };
+  const SHOWCASE_BASE_ROTATION_Y = -Math.PI + 0.35;
+  const SHOWCASE_FRONT_SCALE = 1.15;
+  const SHOWCASE_TRANSITION_DURATION = 500;
+
+  // Fresnel/rim shader kept unused here on purpose removed: the hover
+  // effect is now handled by the OutlinePass in the post-processing
+  // pipeline above, which draws a single clean line around a trophy's
+  // outer silhouette rather than tracing individual polygon edges.
+  function registerShelfTrophy(trophy) {
+    shelfTrophies.push(trophy);
+  }
+
+  // Pulls a trophy out of the shelf and re-parents it onto the
+  // camera-attached anchor so it reads as "in the foreground", enlarged
+  // and facing the viewer. Its original parent/transform is stored so
+  // closeTrophyShowcase can put it back exactly where it was.
+  function focusOnTrophyShowcase(name) {
+    const trophy = shelfTrophies.find((entry) => entry.name === name);
+    if (!trophy || showcasedTrophyName === name) return;
+    if (showcasedTrophyName) closeTrophyShowcase();
+    showcaseOriginalState = {
+      parent: trophy.parent,
+      position: trophy.position.clone(),
+      rotation: trophy.rotation.clone(),
+      scale: trophy.scale.clone()
+    };
+    setHoveredTrophy(null);
+    const fromPosition = trophy.position.clone();
+    const fromRotation = trophy.rotation.clone();
+    const fromScale = trophy.scale.clone();
+    trophyShowcaseAnchor.add(trophy);
+    showcaseTransition = {
+      trophy,
+      startedAt: performance.now(),
+      duration: SHOWCASE_TRANSITION_DURATION,
+      fromPosition,
+      fromRotation,
+      fromScale,
+      toPosition: new THREE.Vector3(0, -0.18, 0),
+      toRotation: new THREE.Euler(0, SHOWCASE_BASE_ROTATION_Y, 0),
+      toScale: new THREE.Vector3(SHOWCASE_FRONT_SCALE, SHOWCASE_FRONT_SCALE, SHOWCASE_FRONT_SCALE),
+      closing: false
+    };
+    showcaseTilt.x = 0;
+    showcaseTilt.y = 0;
+    showcaseDragState = null;
+    showcasedTrophyName = name;
+  }
+
+  function closeTrophyShowcase() {
+    if (!showcasedTrophyName) return;
+    const trophy = shelfTrophies.find((entry) => entry.name === showcasedTrophyName);
+    if (!trophy || !showcaseOriginalState) {
+      showcasedTrophyName = null;
+      showcaseOriginalState = null;
+      showcaseTransition = null;
+      return;
+    }
+    const fromPosition = trophy.position.clone();
+    const fromRotation = trophy.rotation.clone();
+    const fromScale = trophy.scale.clone();
+    showcaseTransition = {
+      trophy,
+      startedAt: performance.now(),
+      duration: SHOWCASE_TRANSITION_DURATION,
+      fromPosition,
+      fromRotation,
+      fromScale,
+      toPosition: showcaseOriginalState.position.clone(),
+      toRotation: showcaseOriginalState.rotation.clone(),
+      toScale: showcaseOriginalState.scale.clone(),
+      closing: true
+    };
+  }
+
+  function updateTrophyShowcaseTransition() {
+    if (!showcaseTransition) return;
+    const trophy = showcaseTransition.trophy;
+    const elapsed = performance.now() - showcaseTransition.startedAt;
+    const progress = THREE.MathUtils.clamp(elapsed / showcaseTransition.duration, 0, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+
+    trophy.position.lerpVectors(showcaseTransition.fromPosition, showcaseTransition.toPosition, eased);
+    trophy.rotation.x = THREE.MathUtils.lerp(showcaseTransition.fromRotation.x, showcaseTransition.toRotation.x, eased);
+    trophy.rotation.y = THREE.MathUtils.lerp(showcaseTransition.fromRotation.y, showcaseTransition.toRotation.y, eased);
+    trophy.rotation.z = THREE.MathUtils.lerp(showcaseTransition.fromRotation.z, showcaseTransition.toRotation.z, eased);
+    trophy.scale.lerpVectors(showcaseTransition.fromScale, showcaseTransition.toScale, eased);
+
+    if (progress >= 1) {
+      if (showcaseTransition.closing) {
+        showcaseOriginalState.parent.add(trophy);
+        trophy.position.copy(showcaseOriginalState.position);
+        trophy.rotation.copy(showcaseOriginalState.rotation);
+        trophy.scale.copy(showcaseOriginalState.scale);
+        showcasedTrophyName = null;
+        showcaseOriginalState = null;
+      } else {
+        trophy.position.copy(showcaseTransition.toPosition);
+        trophy.rotation.copy(showcaseTransition.toRotation);
+        trophy.scale.copy(showcaseTransition.toScale);
+      }
+      showcaseTransition = null;
+    }
+  }
+
+  // The showcased trophy rests in a subtle idle motion when untouched, but
+  // a drag interaction takes over so users can freely rotate it by hand.
+  function updateTrophyShowcaseTilt() {
+    if (!showcasedTrophyName) return;
+    const trophy = shelfTrophies.find((entry) => entry.name === showcasedTrophyName);
+    if (!trophy) return;
+
+    if (showcaseDragState) {
+      trophy.rotation.x = showcaseTilt.x;
+      trophy.rotation.y = SHOWCASE_BASE_ROTATION_Y + showcaseTilt.y;
+      return;
+    }
+
+    const time = performance.now() * 0.0012;
+    const idleX = Math.sin(time) * 0.12;
+    const idleY = Math.cos(time * 1.4) * 0.18;
+    showcaseTilt.x += (idleX - showcaseTilt.x) * 0.04;
+    showcaseTilt.y += (idleY - showcaseTilt.y) * 0.04;
+    trophy.rotation.x = showcaseTilt.x;
+    trophy.rotation.y = SHOWCASE_BASE_ROTATION_Y + showcaseTilt.y;
+  }
+
+  function setHoveredTrophy(name) {
+    if (hoveredTrophyName === name) return;
+    hoveredTrophyName = name;
+    const trophy = name ? shelfTrophies.find((entry) => entry.name === name) : null;
+    outlinePass.selectedObjects = trophy ? [trophy] : [];
+  }
   let cameraTransition = null;
   let projectsFocusReached = false;
   let projectsFocusHandler = null;
@@ -790,13 +1043,13 @@ export function createRoomScene(container, projects = []) {
     if (shouldUpdateWindowLighting) {
       windowLights.forEach((light, index) => {
         light.color.copy(windowColor);
-        light.intensity = windowEnergy * (index === 0 ? 0.42 : 0.58);
+        light.intensity = windowEnergy * (index === 0 ? 0.42 : 0.58) * (qualityProfile.lowPower ? 0.7 : 1);
       });
       ambientSkyColor.lerpColors(nightAmbientColor, dayAmbientColor, daylight);
       ambientGroundColor.lerpColors(nightGroundColor, dayGroundColor, daylight);
       ambientLight.color.copy(ambientSkyColor);
       ambientLight.groundColor.copy(ambientGroundColor);
-      ambientLight.intensity = 0.48 + daylight * 0.92;
+      ambientLight.intensity = (0.48 + daylight * 0.92) * (qualityProfile.lowPower ? 0.8 : 1);
     }
     ceilingLight.intensity = 10 + (1 - daylight) * 12;
 
@@ -884,6 +1137,54 @@ export function createRoomScene(container, projects = []) {
     return new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({ map: labelTexture, transparent: backgroundColor === "transparent" }));
   }
 
+  function addCorkBoard(scene) {
+    const boardTexture = loadSharedTexture("assets/textures/board.png");
+    boardTexture.colorSpace = THREE.SRGBColorSpace;
+    boardTexture.magFilter = THREE.NearestFilter;
+    boardTexture.minFilter = THREE.NearestFilter;
+
+    const boardGroup = furnitureGroup(scene, "cork-board", "Tableau en liège");
+    const frame = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 1.6, 0.12),
+      material(0x5c4b3e, 0.7)
+    );
+    frame.position.set(9.75, 4.15, -5.8);
+    boardGroup.add(frame);
+
+    const cork = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.92, 1.28),
+      new THREE.MeshStandardMaterial({ map: boardTexture, roughness: 0.95, metalness: 0.04 })
+    );
+    cork.position.set(9.75, 4.15, -5.7);
+    cork.rotation.y = Math.PI;
+    boardGroup.add(cork);
+
+    const pin = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.045, 0.08, 12),
+      material(0x8e7d66, 0.35)
+    );
+    pin.position.set(9.75, 4.74, -5.66);
+    pin.rotation.x = Math.PI / 2;
+    boardGroup.add(pin);
+
+    // Without this, boardGroup's own origin stays at world (0,0,0) while its
+    // children sit ~9.75/4.15/-5.8 away from it - so scaling or rotating the
+    // group (via the live editor or positions.json) swings the whole board
+    // around that distant, empty point instead of spinning in place.
+    centerFurniturePivot(boardGroup);
+
+    // addCorkBoard() runs after the getEditorObjects().forEach(...
+    // applyConfiguredPosition...) pass that restores every other object's
+    // saved position on load (the board doesn't exist in the scene yet at
+    // that point, so that pass silently skips it). Apply the saved position
+    // here instead, right after the group exists - otherwise any position
+    // saved for "cork-board" is dropped on every reload and it always
+    // resets to these hardcoded coordinates.
+    applyConfiguredPosition("cork-board", boardGroup);
+
+    return boardGroup;
+  }
+
   function createWorldTitleLabel() {
     const titleGroup = new THREE.Group();
     titleGroup.name = "world-title-label";
@@ -941,13 +1242,14 @@ export function createRoomScene(container, projects = []) {
 
     onVisible(container, () => onIdle(() => {
       loadSharedModel("assets/models/television.mtl", "assets/models/television.obj").then((template) => {
-        const model = template.clone();
+        const rawTelevision = template.clone();
+        const model = centerModelPivot(rawTelevision);
         roomTelevision = model;
         roomTelevision.position.set(6.0, 1.02, -5.15);
         roomTelevision.rotation.y = Math.PI - 0.12;
         roomTelevision.scale.setScalar(1.28);
         applyConfiguredPosition("television", roomTelevision);
-        roomTelevision.traverse((part) => {
+        rawTelevision.traverse((part) => {
           if (!part.isMesh) return;
           part.castShadow = false;
           part.receiveShadow = false;
@@ -973,7 +1275,7 @@ export function createRoomScene(container, projects = []) {
         televisionGlow.position.set(0, 0.62, 0.5);
         const televisionGlowTarget = new THREE.Object3D();
         televisionGlowTarget.position.set(0, 0.62, 4);
-        roomTelevision.add(televisionGlow, televisionGlowTarget);
+        rawTelevision.add(televisionGlow, televisionGlowTarget);
         televisionGlow.target = televisionGlowTarget;
         drawRoomScreen(projects[0] || { title: "SIGNAL", meta: "READY", description: "" }, true);
         roomTelevision.visible = false;
@@ -986,12 +1288,13 @@ export function createRoomScene(container, projects = []) {
     onVisible(container, () => onIdle(() => {
       loadSharedModel("assets/models/Cassette.mtl", "assets/models/Cassette.obj").then((template) => {
         projects.forEach((project, index) => {
-          const cassette = template.clone();
+          const rawCassette = template.clone();
+          const cassette = centerModelPivot(rawCassette);
           cassette.position.set(4.65 + index * 0.12, 0.24 + index * 0.12, -4.2 - index * 0.08);
           cassette.rotation.set(0, [-0.08, 0.12, -0.05][index] || 0, 0);
           cassette.scale.setScalar(0.96);
           applyConfiguredPosition(`cassette-${index + 1}`, cassette);
-          cassette.traverse((part) => {
+          rawCassette.traverse((part) => {
             if (!part.isMesh) return;
             part.castShadow = true;
             part.receiveShadow = true;
@@ -1005,7 +1308,7 @@ export function createRoomScene(container, projects = []) {
           });
           const label = createPropLabel(project.title);
           label.position.set(0, 0.064, 0.316);
-          cassette.add(label);
+          rawCassette.add(label);
           const shouldBeVisible = !cassetteStates.get(index);
           cassette.visible = false;
           scene.add(cassette);
@@ -1019,13 +1322,14 @@ export function createRoomScene(container, projects = []) {
     }, { timeout: 2500 }));
 
     loadSharedModel("assets/models/cup.mtl", "assets/models/cup.obj").then((template) => {
-      const model = template.clone();
+      const rawCup = template.clone();
+      const model = centerModelPivot(rawCup);
       roomCup = model;
       roomCup.name = "cup";
       roomCup.position.set(-5.5, 1.78, -2.2);
       roomCup.scale.setScalar(1.35);
       applyConfiguredPosition("cup", roomCup);
-      roomCup.traverse((part) => {
+      rawCup.traverse((part) => {
         if (!part.isMesh) return;
         part.castShadow = true;
         part.receiveShadow = true;
@@ -1040,7 +1344,7 @@ export function createRoomScene(container, projects = []) {
       });
       const cupLabel = createPropLabel("MES PROJETS", { fontSize: 48, fontWeight: 700, strokeWidth: 1.6, width: 0.4, height: 0.15, canvasHeight: 128 });
       cupLabel.position.set(0, 0.30, 0.2);
-      roomCup.add(cupLabel);
+      rawCup.add(cupLabel);
       roomCup.visible = false;
       scene.add(roomCup);
       prepareRoomModel(roomCup).then(() => {
@@ -1050,14 +1354,15 @@ export function createRoomScene(container, projects = []) {
     }, (error) => console.error("Impossible de charger le modèle cup de la pièce.", error));
 
     loadSharedModel("assets/models/laptop.mtl", "assets/models/laptop.obj").then((template) => {
-      const model = template.clone();
+      const rawLaptop = template.clone();
+      const model = centerModelPivot(rawLaptop);
       roomLaptop = model;
       roomLaptop.name = "laptop";
       roomLaptop.position.set(-5.1, 1.72, -2.2);
       roomLaptop.rotation.y = -0.9;
       roomLaptop.scale.setScalar(1.5);
       applyConfiguredPosition("laptop", roomLaptop);
-      roomLaptop.traverse((part) => {
+      rawLaptop.traverse((part) => {
         if (!part.isMesh) return;
         part.castShadow = true;
         part.receiveShadow = true;
@@ -1088,7 +1393,7 @@ export function createRoomScene(container, projects = []) {
       laptopScreenLabel.material.depthTest = true;
       laptopScreenLabel.material.depthWrite = true;
       laptopScreenLabel.renderOrder = 20;
-      roomLaptop.add(laptopScreenLabel);
+      rawLaptop.add(laptopScreenLabel);
       roomLaptop.visible = false;
       scene.add(roomLaptop);
       prepareRoomModel(roomLaptop).then(() => {
@@ -1096,6 +1401,36 @@ export function createRoomScene(container, projects = []) {
         markShadowsDirty();
       });
     }, (error) => console.error("Impossible de charger le modèle laptop de la pièce.", error));
+
+    loadSharedModel("assets/models/vintage_phone.mtl", "assets/models/vintage_phone.obj").then((template) => {
+      const rawWallPhone = template.clone();
+      const model = centerModelPivot(rawWallPhone);
+      roomWallPhone = model;
+      roomWallPhone.name = "wall-phone";
+      roomWallPhone.position.set(-4.9, 3.15, -5.84);
+      roomWallPhone.rotation.y = Math.PI / 2;
+      roomWallPhone.scale.setScalar(1.05);
+      applyConfiguredPosition("wall-phone", roomWallPhone);
+      rawWallPhone.traverse((part) => {
+        if (!part.isMesh) return;
+        part.castShadow = true;
+        part.receiveShadow = true;
+        const materials = Array.isArray(part.material) ? part.material : [part.material];
+        materials.forEach((material) => {
+          if (!material.map) return;
+          material.map.magFilter = THREE.NearestFilter;
+          material.map.minFilter = THREE.NearestFilter;
+          material.map.anisotropy = 1;
+          material.map.needsUpdate = true;
+        });
+      });
+      roomWallPhone.visible = false;
+      scene.add(roomWallPhone);
+      prepareRoomModel(roomWallPhone).then(() => {
+        roomWallPhone.visible = true;
+        markShadowsDirty();
+      });
+    }, (error) => console.error("Impossible de charger le modèle vintage_phone de la pièce.", error));
 
   }
 
@@ -1105,6 +1440,8 @@ export function createRoomScene(container, projects = []) {
       { id: "television", label: "Télévision", object: roomTelevision },
       { id: "cup", label: "Tasse", object: roomCup },
       { id: "laptop", label: "Laptop", object: roomLaptop },
+      { id: "wall-phone", label: "Téléphone mural", object: roomWallPhone },
+      { id: "cork-board", label: "Tableau en liège", object: scene.getObjectByName("cork-board") },
       { id: "scratch-trophy", label: "Trophée Scratch", object: scene.getObjectByName("scratch-trophy") },
       { id: "python-trophy", label: "Trophée Python", object: scene.getObjectByName("python-trophy") },
       { id: "csharp-trophy", label: "Trophée C#", object: scene.getObjectByName("csharp-trophy") },
@@ -1117,6 +1454,7 @@ export function createRoomScene(container, projects = []) {
       ["kitchen", "Cuisine / îlot"],
       ["dining-table", "Table et chaises"],
       ["sofa", "Canapé en L"],
+      ["coffee-table", "Table basse"],
       ["tv-stand", "Meuble TV"],
       ["shelf", "Étagère"],
       ["plant", "Plante"]
@@ -1230,6 +1568,8 @@ export function createRoomScene(container, projects = []) {
     renderer.setSize(container.clientWidth, container.clientHeight, false);
     camera.aspect = container.clientWidth / Math.max(1, container.clientHeight);
     camera.updateProjectionMatrix();
+    composer.setSize(container.clientWidth, container.clientHeight);
+    outlinePass.resolution.set(container.clientWidth, container.clientHeight);
   }
   function onPointerMove(event) {
     pointer.x = (event.clientX / window.innerWidth - 0.5) * 2;
@@ -1253,7 +1593,7 @@ export function createRoomScene(container, projects = []) {
   }
 
   function getRoomInteraction(event) {
-    if (editor.active || cameraTransition) return null;
+    if (editor.active || cameraTransition || showcasedTrophyName) return null;
     const canvasBounds = renderer.domElement.getBoundingClientRect();
     const pointerPosition = new THREE.Vector2(
       ((event.clientX - canvasBounds.left) / canvasBounds.width) * 2 - 1,
@@ -1263,6 +1603,7 @@ export function createRoomScene(container, projects = []) {
     const interactiveObjects = [...roomCassettes.filter(Boolean), roomTelevision].filter(Boolean);
     if (roomCup) interactiveObjects.push(roomCup);
     if (roomLaptop) interactiveObjects.push(roomLaptop);
+    interactiveObjects.push(...shelfTrophies);
     const plantReturnLabel = scene.getObjectByName("plant-return-label");
     const projectsLabel = scene.getObjectByName("projects-label");
     if (plantReturnLabel) interactiveObjects.push(plantReturnLabel);
@@ -1287,6 +1628,8 @@ export function createRoomScene(container, projects = []) {
       }
       if (roomCup?.getObjectById(hit.object.id)) return { type: "cup" };
       if (roomLaptop?.getObjectById(hit.object.id)) return { type: "laptop" };
+      const trophy = shelfTrophies.find((entry) => entry.getObjectById(hit.object.id));
+      if (trophy) return { type: "trophy", name: trophy.name };
     }
 
     return null;
@@ -1307,6 +1650,7 @@ export function createRoomScene(container, projects = []) {
     } else {
       roomActionUniforms.hasHoveredAction.value = 0;
     }
+    setHoveredTrophy(interaction?.type === "trophy" ? interaction.name : null);
     renderer.domElement.style.cursor = interaction ? "pointer" : "default";
   }
 
@@ -1320,6 +1664,10 @@ export function createRoomScene(container, projects = []) {
     if (interaction.type === "laptop") roomLaptopHandler?.();
     if (interaction.type === "return") roomReturnHandler?.();
     if (interaction.type === "projects") roomProjectsHandler?.();
+    if (interaction.type === "trophy") {
+      focusOnTrophyShowcase(interaction.name);
+      roomTrophySelectHandler?.(interaction.name);
+    }
   }
   function render(time) {
     const deltaTime = Math.min(0.05, (time - (render.previousTime || time)) / 1000);
@@ -1342,7 +1690,7 @@ export function createRoomScene(container, projects = []) {
         }
       } else if (presentationCameraPose) {
         applyPresentationCamera();
-      } else {
+      } else if (!showcasedTrophyName) {
         const targetX = -8.4 + pointer.x * 0.42;
         const targetY = 6.2 - pointer.y * 0.18;
         camera.position.x += (targetX - camera.position.x) * 0.025;
@@ -1350,7 +1698,10 @@ export function createRoomScene(container, projects = []) {
         camera.lookAt(1.4, 1.7, -2.3);
       }
     }
-    renderer.render(scene, camera);
+    updateTrophyShowcaseTransition();
+    updateTrophyShowcaseTilt();
+    syncContactTabState();
+    composer.render();
     requestAnimationFrame(render);
   }
 
@@ -1362,8 +1713,47 @@ export function createRoomScene(container, projects = []) {
   window.addEventListener("resize", resize);
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   renderer.domElement.addEventListener("pointermove", handleRoomPointerMove);
+  renderer.domElement.addEventListener("pointerleave", () => {
+    roomActionUniforms.hasHoveredAction.value = 0;
+    setHoveredTrophy(null);
+  });
   renderer.domElement.addEventListener("click", handleRoomClick);
+  renderer.domElement.addEventListener("pointerdown", (event) => {
+    if (!showcasedTrophyName || editor.active) return;
+    const trophy = shelfTrophies.find((entry) => entry.name === showcasedTrophyName);
+    if (!trophy) return;
+    const bounds = renderer.domElement.getBoundingClientRect();
+    const pointer = new THREE.Vector2(
+      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+      -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+    );
+    editor.raycaster.setFromCamera(pointer, camera);
+    const hit = editor.raycaster.intersectObject(trophy, true)[0];
+    if (!hit) return;
+    showcaseDragState = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startTiltX: showcaseTilt.x,
+      startTiltY: showcaseTilt.y
+    };
+    renderer.domElement.setPointerCapture(event.pointerId);
+  });
+  renderer.domElement.addEventListener("pointermove", (event) => {
+    if (!showcaseDragState || !showcasedTrophyName) return;
+    const dx = event.clientX - showcaseDragState.startX;
+    const dy = event.clientY - showcaseDragState.startY;
+    showcaseTilt.y = showcaseDragState.startTiltY + dx * 0.008;
+    showcaseTilt.x = THREE.MathUtils.clamp(showcaseDragState.startTiltX + dy * 0.005, -0.9, 0.9);
+  });
+  renderer.domElement.addEventListener("pointerup", () => {
+    showcaseDragState = null;
+  });
+  renderer.domElement.addEventListener("pointerleave", () => {
+    showcaseDragState = null;
+  });
   const editorPanel = createRoomEditor();
+  contactTab = createContactTab();
   const editorToggle = document.createElement("button");
   editorToggle.className = "room-editor-toggle";
   editorToggle.type = "button";
@@ -1371,14 +1761,16 @@ export function createRoomScene(container, projects = []) {
   editorToggle.addEventListener("click", () => setEditorMode(!editor.active));
   container.parentElement.appendChild(editorToggle);
   renderer.domElement.addEventListener("pointerdown", (event) => {
-    if (!editor.active || !editor.selected) return;
+    if (!editor.active || !editor.selected || event.button !== 0) return;
     const bounds = renderer.domElement.getBoundingClientRect();
     editor.pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
     editor.pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
     editor.raycaster.setFromCamera(editor.pointer, camera);
-    editor.floor.constant = -editor.selected.object.position.y;
+    const selectedObject = editor.selected.object;
+    const planeY = selectedObject.position.y;
+    editor.floor.constant = -planeY;
     if (!editor.raycaster.ray.intersectPlane(editor.floor, editor.dragStartPoint)) return;
-    editor.objectStartPosition.copy(editor.selected.object.position);
+    editor.objectStartPosition.copy(selectedObject.position);
     editor.dragging = true;
     renderer.domElement.setPointerCapture(event.pointerId);
   });
@@ -1401,14 +1793,27 @@ export function createRoomScene(container, projects = []) {
     if (editor.raycaster.ray.intersectPlane(editor.floor, editor.hitPoint)) {
       const dragDeltaX = editor.hitPoint.x - editor.dragStartPoint.x;
       const dragDeltaZ = editor.hitPoint.z - editor.dragStartPoint.z;
-      editor.selected.object.position.x = editor.objectStartPosition.x + dragDeltaX;
-      editor.selected.object.position.z = editor.objectStartPosition.z + dragDeltaZ;
-      editor.selected.object.position.y = editor.objectStartPosition.y;
+      const selectedObject = editor.selected.object;
+      const nextX = editor.objectStartPosition.x + dragDeltaX;
+      const nextZ = editor.objectStartPosition.z + dragDeltaZ;
+      const roomBounds = {
+        x: { min: -9.5, max: 9.5 },
+        z: { min: -6.5, max: 2.2 }
+      };
+      const isWallTitle = selectedObject.name === "world-title-label" || selectedObject.userData?.editorId === "world-title-label";
+      selectedObject.position.set(
+        isWallTitle ? THREE.MathUtils.clamp(nextX, roomBounds.x.min, roomBounds.x.max) : nextX,
+        editor.objectStartPosition.y,
+        isWallTitle ? THREE.MathUtils.clamp(nextZ, roomBounds.z.min, roomBounds.z.max) : nextZ
+      );
+      selectedObject.updateMatrixWorld(true);
+      scene.updateMatrixWorld(true);
       syncEditorFields();
       saveEditorPositions();
     }
   });
   renderer.domElement.addEventListener("pointerup", () => { editor.dragging = false; });
+  renderer.domElement.addEventListener("pointercancel", () => { editor.dragging = false; });
   loadRoomProps();
   loadConfiguredPositions().then(() => requestAnimationFrame(render));
 
@@ -1445,6 +1850,10 @@ export function createRoomScene(container, projects = []) {
     setProjectsHandler(handler) {
       roomProjectsHandler = handler;
     },
+    setTrophySelectHandler(handler) {
+      roomTrophySelectHandler = handler;
+    },
+    closeTrophyShowcase,
     // Lets a caller know exactly once the camera has finished travelling to
     // the "Mes Projets" position (i.e. focusOnProjects has completed), so
     // heavier work (loading the television/cassette close-up 3D modules)
@@ -1506,6 +1915,50 @@ function addDiningTable(scene, surface, wood) {
     group.add(model);
   }, (error) => console.error("Impossible de charger le modèle de table.", error));
 
+  return group;
+}
+
+function addCoffeeTable(scene, surface, wood) {
+  const group = furnitureGroup(scene, "coffee-table", "Table basse");
+  group.position.set(-2.6, 0, -1.8);
+
+  const tableTop = box(2.2, 0.18, 1.3, surface, [0, 0.46, 0]);
+  const legMaterial = material(0x3d312b, 0.82);
+  const tableLegPositions = [
+    [-0.9, 0.2, -0.45],
+    [0.9, 0.2, -0.45],
+    [-0.9, 0.2, 0.45],
+    [0.9, 0.2, 0.45]
+  ];
+  tableLegPositions.forEach(([x, y, z]) => {
+    group.add(box(0.12, 0.46, 0.12, legMaterial, [x, y, z]));
+  });
+
+  const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.08, 14), material(0x2d2d2d, 0.62));
+  lampBase.position.set(0, 0.54, 0);
+
+  const lampStem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.52, 10), material(0x9a8b7d, 0.48));
+  lampStem.position.set(0, 0.83, 0);
+
+  const lampShade = new THREE.Mesh(
+    new THREE.ConeGeometry(0.34, 0.52, 20),
+    new THREE.MeshStandardMaterial({
+      color: 0xe1c18c,
+      emissive: 0x8c5d1d,
+      emissiveIntensity: 0.38,
+      roughness: 0.42,
+      metalness: 0.1
+    })
+  );
+  lampShade.position.set(0, 1.18, 0);
+  lampShade.rotation.x = Math.PI;
+
+  const lampGlow = new THREE.PointLight(0xffd8a3, 1.6, 7.5, 2.2);
+  lampGlow.position.set(0, 1.28, 0);
+  lampGlow.castShadow = false;
+  lampGlow.decay = 2;
+
+  group.add(tableTop, lampBase, lampStem, lampShade, lampGlow);
   return group;
 }
 

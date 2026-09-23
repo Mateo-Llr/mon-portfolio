@@ -23,6 +23,39 @@ function resizeDesignCanvas() {
 resizeDesignCanvas();
 window.addEventListener("resize", resizeDesignCanvas);
 
+const trophies = {
+  "scratch-trophy": {
+    title: "SCRATCH",
+    meta: "PREMIERS PAS&nbsp;&nbsp; / &nbsp;&nbsp;PROGRAMMATION VISUELLE",
+    description: "Mon tout premier langage : c'est avec Scratch que Soulfract est né, en assemblant des blocs plutôt que du texte."
+  },
+  "python-trophy": {
+    title: "PYTHON",
+    meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;ALGORITHMIQUE",
+    description: "Utilisé pour apprendre la logique de programmation, les structures de données et l'algorithmique en cours et en autonomie."
+  },
+  "csharp-trophy": {
+    title: "C#",
+    meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;.NET",
+    description: "Le langage principal de Soulfract, mon projet de jeu développé sans moteur, directement avec C# et .NET."
+  },
+  "html-trophy": {
+    title: "HTML",
+    meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;STRUCTURE WEB",
+    description: "La base de toutes mes pages web, dont ce portfolio, pour structurer le contenu avant de le mettre en forme."
+  },
+  "godot-trophy": {
+    title: "GODOT",
+    meta: "MOTEUR DE JEU&nbsp;&nbsp; / &nbsp;&nbsp;GAME DEV",
+    description: "Utilisé pour prototyper rapidement des idées de jeu avant de me tourner vers un développement sans moteur."
+  },
+  "css-trophy": {
+    title: "CSS",
+    meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;MISE EN FORME",
+    description: "Utilisé avec HTML pour donner à mes pages web leur mise en page, leurs couleurs et leurs animations."
+  }
+};
+
 const projectSheet = document.querySelector("#projectSheet");
 const sheetKicker = document.querySelector("#sheetKicker");
 const sheetIndex = document.querySelector("#sheetIndex");
@@ -30,6 +63,11 @@ const sheetTitle = document.querySelector("#sheetTitle");
 const sheetMeta = document.querySelector("#sheetMeta");
 const sheetLead = document.querySelector("#sheetLead");
 const sheetContent = document.querySelector("#sheetContent");
+
+const trophyPanel = document.querySelector("#trophyPanel");
+const trophyPanelTitle = document.querySelector("#trophyPanelTitle");
+const trophyPanelMeta = document.querySelector("#trophyPanelMeta");
+const trophyPanelDescription = document.querySelector("#trophyPanelDescription");
 
 let roomScene = {
   updateScreen() {},
@@ -46,14 +84,16 @@ let roomScene = {
   focusOnProjects() {},
   focusOnInitialView() {},
   focusOnAchievements() {},
-  focusOnCameraIndex() {}
+  focusOnCameraIndex() {},
+  setTrophySelectHandler() {},
+  closeTrophyShowcase() {}
 };
 
 let insertedCassetteIndex = null;
 
 async function scheduleThreeSceneInitialization() {
   try {
-    const { createRoomScene } = await import("./assets/datas/room.js?v=title-layout-fix-2");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=contact-tab-corkboard-1");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(() => roomScene.focusOnProjects());
     roomScene.setTelevisionActionHandler(() => roomScene.focusOnProjects());
@@ -63,6 +103,7 @@ async function scheduleThreeSceneInitialization() {
     roomScene.setLaptopHandler(() => roomScene.focusOnCameraIndex(5));
     roomScene.setReturnHandler(() => roomScene.focusOnInitialView());
     roomScene.setProjectsHandler(() => roomScene.focusOnAchievements());
+    roomScene.setTrophySelectHandler((id) => openTrophyPanel(id));
     roomScene.updateScreen(projects[0], true);
   } catch (error) {
     console.error("Impossible de charger la scène 3D.", error);
@@ -106,6 +147,31 @@ function closeProjectSheet() {
   projectSheet.setAttribute("aria-hidden", "true");
   document.body.classList.remove("is-sheet-open");
 }
+
+function openTrophyPanel(id) {
+  const trophy = trophies[id];
+  if (!trophy || !trophyPanel) return;
+  trophyPanelTitle.innerHTML = trophy.title;
+  trophyPanelMeta.innerHTML = trophy.meta;
+  trophyPanelDescription.textContent = trophy.description;
+  trophyPanel.classList.add("is-visible");
+  trophyPanel.setAttribute("aria-hidden", "false");
+}
+
+function closeTrophyPanel() {
+  if (!trophyPanel) return;
+  trophyPanel.classList.remove("is-visible");
+  trophyPanel.setAttribute("aria-hidden", "true");
+  roomScene.closeTrophyShowcase();
+}
+
+document.querySelectorAll("[data-close-trophy]").forEach((element) => {
+  element.addEventListener("click", closeTrophyPanel);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeTrophyPanel();
+});
 
 document.querySelectorAll("[data-close-sheet]").forEach((element) => {
   element.addEventListener("click", closeProjectSheet);
