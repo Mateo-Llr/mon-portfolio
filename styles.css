@@ -82,6 +82,8 @@ button { cursor: pointer; }
 .room-editor button { float: right; margin-top: -25px; border: 0; color: var(--orange); background: transparent; font: inherit; }
 .room-editor label { display: block; margin: 10px 0; color: #aeb6a2; }
 .room-editor select, .room-editor input { width: 100%; margin-top: 5px; padding: 7px; border: 1px solid rgba(221, 213, 193, .3); color: #f4ead2; background: #27332d; font: inherit; }
+.room-editor #roomEditorResetTime { float: none; margin: 6px 0 0; padding: 5px 7px; border: 1px solid rgba(221, 213, 193, .45); color: #e3d8bc; background: rgba(39, 51, 45, .9); font-size: 9px; }
+.room-editor #roomEditorResetTime:hover { color: var(--yellow); border-color: var(--yellow); }
 .camera-position-control { display: flex; align-items: stretch; gap: 5px; margin-top: 5px; }
 .camera-position-control select { flex: 1; min-width: 0; margin-top: 0; }
 .camera-position-control button { flex: 0 0 auto; margin: 0; padding: 0 8px; border: 1px solid rgba(221, 213, 193, .45); color: #e3d8bc; background: rgba(39, 51, 45, .9); font: inherit; font-size: 9px; }

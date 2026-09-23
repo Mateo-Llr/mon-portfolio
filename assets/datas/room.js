@@ -65,7 +65,7 @@ function furnitureGroup(scene, id, label) {
   return group;
 }
 
-function addDynamicSky(scene) {
+function addDynamicSky(scene, getHour) {
   const skyboxCube = new THREE.CubeTexture([]);
   skyboxCube.colorSpace = THREE.SRGBColorSpace;
   scene.background = skyboxCube;
@@ -76,6 +76,7 @@ function addDynamicSky(scene) {
   scene.add(sun, moon);
 
   const skyboxFaces = [];
+  const originalSkyboxFaces = [];
 
   function buildSkyboxFromCrossTexture(image) {
     if (!image) return [];
@@ -106,13 +107,17 @@ function addDynamicSky(scene) {
   function applySkyboxTint(daylight) {
     if (!skyboxFaces.length) return;
 
-    const nightTint = new THREE.Color(0x071426);
+    const nightTint = new THREE.Color(0x30496b);
     const dayTint = new THREE.Color(0xeaf6ff);
     const baseTint = new THREE.Color().lerpColors(nightTint, dayTint, daylight);
 
-    skyboxFaces.forEach((canvas) => {
+    skyboxFaces.forEach((canvas, index) => {
       const context = canvas.getContext("2d");
+      const source = originalSkyboxFaces[index];
       context.save();
+      context.globalCompositeOperation = "source-over";
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(source, 0, 0);
       context.globalCompositeOperation = "multiply";
       context.fillStyle = `rgb(${Math.round(baseTint.r * 255)}, ${Math.round(baseTint.g * 255)}, ${Math.round(baseTint.b * 255)})`;
       context.fillRect(0, 0, canvas.width, canvas.height);
@@ -124,10 +129,9 @@ function addDynamicSky(scene) {
   }
 
   function updateSky() {
-    const date = new Date();
-    const hour = date.getHours() + date.getMinutes() / 60;
+    const hour = getHour();
     const sunrise = 6.5;
-    const sunset = 20.5;
+    const sunset = 21.5;
     const daylight = THREE.MathUtils.clamp(Math.sin(((hour - sunrise) / (sunset - sunrise)) * Math.PI), 0, 1);
 
     if (skyboxFaces.length) {
@@ -146,6 +150,14 @@ function addDynamicSky(scene) {
     if (!expandedFaces.length) return;
     skyboxFaces.length = 0;
     skyboxFaces.push(...expandedFaces);
+    originalSkyboxFaces.length = 0;
+    originalSkyboxFaces.push(...expandedFaces.map((canvas) => {
+      const source = document.createElement("canvas");
+      source.width = canvas.width;
+      source.height = canvas.height;
+      source.getContext("2d").drawImage(canvas, 0, 0);
+      return source;
+    }));
     skyboxCube.images = skyboxFaces;
     skyboxCube.needsUpdate = true;
     scene.background = skyboxCube;
@@ -155,6 +167,7 @@ function addDynamicSky(scene) {
 
   updateSky();
   window.setInterval(updateSky, 60000);
+  return updateSky;
 }
 
 function centerFurniturePivot(group, pivot = null) {
@@ -568,8 +581,14 @@ export function createRoomScene(container, projects = []) {
     position: { x: -4.709, y: 2.924, z: 1.412 },
     rotation: { x: 0.078, y: 0.181 }
   };
+  const roomTime = { overrideMinutes: null };
+  const getRoomHour = () => {
+    if (roomTime.overrideMinutes !== null) return roomTime.overrideMinutes / 60;
+    const date = new Date();
+    return date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+  };
 
-  addDynamicSky(scene);
+  const refreshSky = addDynamicSky(scene, getRoomHour);
   scene.add(createWorldTitleLabel());
 
   scene.add(box(23, 0.25, 17, floor, [0, -0.15, 1.5]));
@@ -660,6 +679,28 @@ export function createRoomScene(container, projects = []) {
     plantLabel.name = "plant-return-label";
     plantLabel.position.set(0, 0.36, 0.401);
     plantVisual.add(plantLabel);
+    const salonReturnPlant = furnitureGroup(scene, "salon-return-plant", "Plante retour salon");
+    salonReturnPlant.userData.editorId = "salon-return-plant";
+    salonReturnPlant.userData.editorLabel = "Plante retour salon";
+    salonReturnPlant.position.set(9.8, 0.06, 3.7);
+    const salonPlantVisual = new THREE.Group();
+    salonReturnPlant.add(salonPlantVisual);
+    salonPlantVisual.add(box(0.78, 0.72, 0.78, plantPot, [0, 0.36, 0]));
+    for (let index = 0; index < 5; index += 1) {
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.36, 8, 5), material(0x506c4d, 0.95));
+      leaf.scale.set(0.5, 1.7, 0.32);
+      leaf.position.set(Math.cos(index * 1.4) * 0.35, 1.09 + index * 0.12, Math.sin(index * 1.4) * 0.28);
+      leaf.rotation.z = (index - 2) * 0.28;
+      leaf.castShadow = true;
+      salonPlantVisual.add(leaf);
+    }
+    const salonReturnLabel = createPropLabel("RETOUR", { fontSize: 210, fontWeight: 700, strokeWidth: 12, width: 0.74, height: 0.58, canvasWidth: 1024, canvasHeight: 512, backgroundColor: "transparent", textColor: "#ffffff", outlineColor: "#111713" });
+    salonReturnLabel.name = "salon-return-plant-label";
+    salonReturnLabel.position.set(0, 0.36, 0.401);
+    salonReturnLabel.userData.interactionType = "return";
+    salonReturnLabel.userData.returnTargetCameraIndex = 3;
+    salonPlantVisual.add(salonReturnLabel);
+    refreshEditorObjectOptions();
     getEditorObjects().forEach(({ id, object }) => applyConfiguredPosition(id, object));
     addCorkBoard(scene);
     markShadowsDirty();
@@ -914,9 +955,9 @@ export function createRoomScene(container, projects = []) {
   const ambientGroundColor = new THREE.Color();
   const nightWindowColor = new THREE.Color(0x7598cf);
   const dayWindowColor = new THREE.Color(0xffe5bc);
-  const nightAmbientColor = new THREE.Color(0x314d82);
+  const nightAmbientColor = new THREE.Color(0x4d6f9c);
   const dayAmbientColor = new THREE.Color(0xb8d4cc);
-  const nightGroundColor = new THREE.Color(0x11182b);
+  const nightGroundColor = new THREE.Color(0x263653);
   const dayGroundColor = new THREE.Color(0x302d28);
   const roomCassettes = [];
   const cassetteStates = new Map();
@@ -1240,16 +1281,15 @@ export function createRoomScene(container, projects = []) {
   }
 
   function updateDynamicLighting(time) {
-    const date = new Date();
-    const hour = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+    const hour = getRoomHour();
     const sunrise = 6.5;
-    const sunset = 20.5;
+    const sunset = 21.5;
     const daylight = THREE.MathUtils.clamp(Math.sin(((hour - sunrise) / (sunset - sunrise)) * Math.PI), 0, 1);
     const lightingMinute = Math.floor(hour * 60);
     const shouldUpdateWindowLighting = lightingMinute !== lastLightingUpdate;
     if (shouldUpdateWindowLighting) lastLightingUpdate = lightingMinute;
     windowColor.lerpColors(nightWindowColor, dayWindowColor, daylight);
-    const windowEnergy = 0.02 + daylight * 0.55;
+    const windowEnergy = 0.08 + daylight * 0.55;
 
     if (shouldUpdateWindowLighting) {
       windowLights.forEach((light, index) => {
@@ -1752,6 +1792,7 @@ export function createRoomScene(container, projects = []) {
       { id: "css-trophy", label: "Trophée CSS", object: scene.getObjectByName("css-trophy") },
       { id: "javascript-trophy", label: "Trophée JavaScript", object: scene.getObjectByName("javascript-trophy") },
       { id: "linux-penguin", label: "Pingouin Linux", object: scene.getObjectByName("linux-penguin") },
+      { id: "salon-return-plant", label: "Plante retour salon", object: scene.getObjectByName("salon-return-plant") },
       ...roomCassettes.map((object, index) => ({ id: `cassette-${index + 1}`, label: `Cassette ${index + 1}`, object }))
     ];
     const furniture = [
@@ -1785,6 +1826,11 @@ export function createRoomScene(container, projects = []) {
     document.body.classList.toggle("is-room-editing", isActive);
     document.querySelector("#roomEditor")?.classList.toggle("is-visible", isActive);
     if (isActive) {
+      const timeInput = document.querySelector("#editor-time");
+      if (timeInput) {
+        const minutes = roomTime.overrideMinutes ?? (new Date().getHours() * 60 + new Date().getMinutes());
+        timeInput.value = `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+      }
       const select = document.querySelector("#editor-object");
       select.innerHTML = getEditorObjects().map((entry) => `<option value="${entry.id}">${entry.label}</option>`).join("");
       editor.cameraPosition.copy(camera.position);
@@ -1813,8 +1859,22 @@ export function createRoomScene(container, projects = []) {
     const panel = document.createElement("aside");
     panel.id = "roomEditor";
     panel.className = "room-editor";
-    panel.innerHTML = `<div class="room-editor-title">ÉDITION LIBRE</div><button type="button" id="roomEditorClose">QUITTER</button><label>Objet<select id="editor-object"></select></label><div class="editor-fields"><label>X<input id="editor-x" type="number" step="0.05"></label><label>Y<input id="editor-y" type="number" step="0.05"></label><label>Z<input id="editor-z" type="number" step="0.05"></label></div><label>Rotation Y<input id="editor-rotation" type="number" step="1"></label><label>Grossissement<input id="editor-scale" type="number" step="0.05" min="0.1" max="10"></label><label>Caméra<div class="camera-position-control"><select id="editor-camera-position"></select><button type="button" id="roomEditorOverwriteCamera" title="Remplacer la caméra choisie par la position actuelle">ÉCRASER</button></div></label><button type="button" id="roomEditorSave">VALIDER</button><button type="button" id="roomEditorClearCache">VIDER LE CACHE</button><p id="roomEditorStatus" role="status">Modifications non enregistrées</p><p>H : activer / quitter la caméra<br>ZQSD : se déplacer<br>A / E : descendre / monter<br>Souris : regarder autour<br>R : enregistrer la caméra</p>`;
+    panel.innerHTML = `<div class="room-editor-title">ÉDITION LIBRE</div><button type="button" id="roomEditorClose">QUITTER</button><label>Heure simulée<input id="editor-time" type="time" step="60"><button type="button" id="roomEditorResetTime">HEURE RÉELLE</button></label><label>Objet<select id="editor-object"></select></label><div class="editor-fields"><label>X<input id="editor-x" type="number" step="0.05"></label><label>Y<input id="editor-y" type="number" step="0.05"></label><label>Z<input id="editor-z" type="number" step="0.05"></label></div><label>Rotation Y<input id="editor-rotation" type="number" step="1"></label><label>Grossissement<input id="editor-scale" type="number" step="0.05" min="0.1" max="10"></label><label>Caméra<div class="camera-position-control"><select id="editor-camera-position"></select><button type="button" id="roomEditorOverwriteCamera" title="Remplacer la caméra choisie par la position actuelle">ÉCRASER</button></div></label><button type="button" id="roomEditorSave">VALIDER</button><button type="button" id="roomEditorClearCache">VIDER LE CACHE</button><p id="roomEditorStatus" role="status">Modifications non enregistrées</p><p>H : activer / quitter la caméra<br>ZQSD : se déplacer<br>A / E : descendre / monter<br>Souris : regarder autour<br>R : enregistrer la caméra</p>`;
     container.parentElement.appendChild(panel);
+    const timeInput = panel.querySelector("#editor-time");
+    timeInput.addEventListener("input", (event) => {
+      const [hours, minutes] = event.target.value.split(":").map(Number);
+      if (Number.isInteger(hours) && Number.isInteger(minutes)) {
+        roomTime.overrideMinutes = hours * 60 + minutes;
+        refreshSky();
+      }
+    });
+    panel.querySelector("#roomEditorResetTime").addEventListener("click", () => {
+      roomTime.overrideMinutes = null;
+      const now = new Date();
+      timeInput.value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      refreshSky();
+    });
     const select = panel.querySelector("#editor-object");
     select.addEventListener("change", () => selectEditorObject(select.value));
     panel.querySelector("#editor-camera-position").addEventListener("change", (event) => {
@@ -1911,10 +1971,12 @@ export function createRoomScene(container, projects = []) {
     if (roomLaptop) interactiveObjects.push(roomLaptop);
     interactiveObjects.push(...shelfTrophies);
     const plantReturnLabel = scene.getObjectByName("plant-return-label");
+    const salonReturnPlantLabel = scene.getObjectByName("salon-return-plant-label");
     const projectsLabel = scene.getObjectByName("projects-label");
     const shelfReturnButton = scene.getObjectByName("shelf-return-button");
     const shelfSkillsLabel = scene.getObjectByName("shelf-skills-label");
     if (plantReturnLabel) interactiveObjects.push(plantReturnLabel);
+    if (salonReturnPlantLabel) interactiveObjects.push(salonReturnPlantLabel);
     if (projectsLabel) interactiveObjects.push(projectsLabel);
     if (shelfSkillsLabel) interactiveObjects.push(shelfSkillsLabel);
     if (shelfReturnButton) interactiveObjects.push(shelfReturnButton);

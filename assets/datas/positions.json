@@ -92,7 +92,7 @@
   },
   "plant": {
     "position": {
-      "x": 1.486,
+      "x": 1.45,
       "y": 0,
       "z": -5
     },
@@ -326,6 +326,15 @@
       "z": -4
     },
     "rotationY": 0,
+    "scale": 1
+  },
+  "salon-return-plant": {
+    "position": {
+      "x": 10.05,
+      "y": 0.06,
+      "z": -2.1
+    },
+    "rotationY": -128,
     "scale": 1
   }
 }
