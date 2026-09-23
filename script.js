@@ -27,17 +27,6 @@ projects.push({
   content: "<h3>Le principe du jeu</h3><p>Le joueur incarne un petit personnage équipé d'une tête de foreuse. Il descend sous la surface d'une planète pour trouver des minerais, puis remonte à la surface afin d'améliorer ses performances.</p><h3>Une descente à gérer</h3><p>Chaque expédition demande de surveiller la batterie, l'énergie, la chaleur ambiante et le poids maximal que le personnage peut transporter.</p><h3>Un projet en développement</h3><p>Deep Driller est créé en HTML et JavaScript dans un style pixel art très rétro et minimaliste.</p><div class=\"sheet-gallery-block\"><h3>Images du projet</h3><div class=\"sheet-gallery\"><img src=\"assets/projects/deep_driller/deep_driller_1.png\" alt=\"Écran de jeu de Deep Driller\"><img src=\"assets/projects/deep_driller/deep_driller_2.png\" alt=\"Exploration souterraine dans Deep Driller\"><img src=\"assets/projects/deep_driller/deep_driller_3.png\" alt=\"Interface de Deep Driller\"><img src=\"assets/projects/deep_driller/deep_driller_4.png\" alt=\"Personnage de Deep Driller\"></div></div>"
 });
 
-const DESIGN_WIDTH = 1280;
-const DESIGN_HEIGHT = 720;
-
-function resizeDesignCanvas() {
-  const scale = Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT);
-  document.documentElement.style.setProperty("--design-scale", scale.toString());
-}
-
-resizeDesignCanvas();
-window.addEventListener("resize", resizeDesignCanvas);
-
 const trophies = {
   "scratch-trophy": {
     title: "SCRATCH",
@@ -197,6 +186,7 @@ function openTrophyPanel(id) {
   trophyPanelTitle.innerHTML = trophy.title;
   if (trophyPanelType) trophyPanelType.innerHTML = trophy.meta;
   trophyPanelDescription.textContent = trophy.description;
+  trophyPanel.inert = false;
   trophyPanel.classList.add("is-visible");
   trophyPanel.setAttribute("aria-hidden", "false");
   trophyPanelClose?.focus();
@@ -204,15 +194,15 @@ function openTrophyPanel(id) {
 
 function closeTrophyPanel() {
   if (!trophyPanel) return;
-  if (trophyPanel.contains(document.activeElement)) {
-    if (trophyPanelReturnFocus && typeof trophyPanelReturnFocus.focus === "function") {
-      trophyPanelReturnFocus.focus();
-    } else {
-      document.body.setAttribute("tabindex", "-1");
-      document.body.focus({ preventScroll: true });
-      document.body.removeAttribute("tabindex");
-    }
+  const returnFocus = trophyPanelReturnFocus && !trophyPanel.contains(trophyPanelReturnFocus)
+    ? trophyPanelReturnFocus
+    : document.body;
+  if (typeof returnFocus.focus === "function") {
+    if (returnFocus === document.body) document.body.setAttribute("tabindex", "-1");
+    returnFocus.focus({ preventScroll: true });
+    if (returnFocus === document.body) document.body.removeAttribute("tabindex");
   }
+  trophyPanel.inert = true;
   trophyPanel.classList.remove("is-visible");
   trophyPanel.setAttribute("aria-hidden", "true");
   trophyPanelReturnFocus = null;
