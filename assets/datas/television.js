@@ -93,8 +93,6 @@ export function createTelevisionModel(container, projects) {
   let baseScreenUvs;
   let dynamicScreenUvs;
   let cassetteInserted = false;
-  let staticAnimationId = null;
-  let staticTimeoutId = null;
   let screenTransitionToken = 0;
   let ejectHandler = null;
   let projectOpenHandler = null;
@@ -291,11 +289,11 @@ diffuseColor.rgb += vec3(crtJitter * crtEdge * 0.12);` : ""}`
     const isScreenAction = hit?.object === television.getObjectByName("screen");
     if (actionUv && isRedAction(actionUv)) {
       if (cassetteInserted) ejectHandler?.();
-      else playEjectedStatic();
+      else showEjectedScreen();
       return;
     }
     if (isScreenAction && !cassetteInserted) {
-      playEjectedStatic();
+      showEjectedScreen();
       return;
     }
     if (actionUv && isBlueAction(actionUv)) {
@@ -314,130 +312,20 @@ diffuseColor.rgb += vec3(crtJitter * crtEdge * 0.12);` : ""}`
     screenMaterial.needsUpdate = true;
   }
 
+  function showProjectScreen(projectIndex) {
+    screenTransitionToken += 1;
+    drawProjectScreen(canvas, projects[projectIndex], projectIndex);
+    texture.needsUpdate = true;
+    syncFullscreenScreen();
+  }
+
   function showEjectedScreen() {
-    cancelAnimationFrame(staticAnimationId);
-    clearTimeout(staticTimeoutId);
+    screenTransitionToken += 1;
     restoreBaseScreen();
     syncFullscreenBaseScreen();
   }
 
-  // Generating fresh per-pixel random noise (960x540 => ~1.5M Math.random()
-  // calls) on every animation frame is what caused the freeze in the middle
-  // of a scene transition: the static effect ran for ~15 frames, each one
-  // doing that full pixel pass plus a putImageData, all synchronously on the
-  // main thread. Instead, a handful of noise frames are rendered ONCE (the
-  // first time static is needed) and then simply blitted with drawImage,
-  // which is orders of magnitude cheaper.
-  const STATIC_FRAME_COUNT = 6;
-  const STATIC_NOISE_WIDTH = 240;
-  const STATIC_NOISE_HEIGHT = 135;
-  let staticNoiseFrames = null;
-
-  function buildStaticNoiseFrames() {
-    if (staticNoiseFrames) return staticNoiseFrames;
-    staticNoiseFrames = Array.from({ length: STATIC_FRAME_COUNT }, (_, frameIndex) => {
-      const noiseCanvas = document.createElement("canvas");
-      noiseCanvas.width = STATIC_NOISE_WIDTH;
-      noiseCanvas.height = STATIC_NOISE_HEIGHT;
-      const noiseContext = noiseCanvas.getContext("2d");
-      noiseContext.fillStyle = frameIndex % 3 === 0 ? "#c3c7ae" : "#6b7667";
-      noiseContext.fillRect(0, 0, STATIC_NOISE_WIDTH, STATIC_NOISE_HEIGHT);
-      const image = noiseContext.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
-      const pixels = image.data;
-      for (let index = 0; index < pixels.length; index += 4) {
-        const value = Math.random() > 0.5 ? 235 : 20;
-        const variation = Math.floor(Math.random() * 35);
-        pixels[index] = Math.min(255, value + variation);
-        pixels[index + 1] = Math.min(255, value + variation);
-        pixels[index + 2] = Math.min(255, value + variation * 0.7);
-        pixels[index + 3] = 255;
-      }
-      noiseContext.putImageData(image, 0, 0);
-      return noiseCanvas;
-    });
-    return staticNoiseFrames;
-  }
-
-  function drawStaticFrame(context, frame) {
-    const frames = buildStaticNoiseFrames();
-    context.drawImage(frames[frame % frames.length], 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    context.fillStyle = "rgba(12, 20, 17, .22)";
-    for (let y = frame % 8; y < SCREEN_HEIGHT; y += 8) context.fillRect(0, y, SCREEN_WIDTH, 2);
-  }
-
-  function playStaticTransition(projectIndex) {
-    const transitionToken = ++screenTransitionToken;
-    if (!screenMaterial || !dynamicScreenUvs) {
-      drawProjectScreen(canvas, projects[projectIndex], projectIndex);
-      texture.needsUpdate = true;
-      syncFullscreenScreen();
-      return;
-    }
-
-    const context = canvas.getContext("2d");
-    const startedAt = performance.now();
-    const duration = 260;
-    cancelAnimationFrame(staticAnimationId);
-    clearTimeout(staticTimeoutId);
-
-    function finishStaticTransition() {
-      if (transitionToken !== screenTransitionToken) return;
-      cancelAnimationFrame(staticAnimationId);
-      drawProjectScreen(canvas, projects[projectIndex], projectIndex);
-      texture.needsUpdate = true;
-      syncFullscreenScreen();
-      staticAnimationId = null;
-      staticTimeoutId = null;
-    }
-
-    function animateStatic(now) {
-      if (transitionToken !== screenTransitionToken) return;
-      const progress = Math.min(1, (now - startedAt) / duration);
-      drawStaticFrame(context, Math.floor(now / 32));
-      texture.needsUpdate = true;
-      syncFullscreenScreen();
-      if (progress < 1) {
-        staticAnimationId = requestAnimationFrame(animateStatic);
-        return;
-      }
-      finishStaticTransition();
-    }
-
-    staticAnimationId = requestAnimationFrame(animateStatic);
-    staticTimeoutId = setTimeout(finishStaticTransition, duration + 100);
-  }
-
-  function playEjectedStatic() {
-    const transitionToken = ++screenTransitionToken;
-    const screenMesh = television?.getObjectByName("screen");
-    if (!screenMesh || !screenMaterial || !dynamicScreenUvs) return;
-    const context = canvas.getContext("2d");
-    const startedAt = performance.now();
-    const duration = 520;
-    cancelAnimationFrame(staticAnimationId);
-    clearTimeout(staticTimeoutId);
-    screenMesh.geometry.setAttribute("uv", dynamicScreenUvs);
-    screenMaterial.map = texture;
-    screenMaterial.emissiveMap = texture;
-    screenMaterial.emissiveIntensity = 0.75;
-    screenMaterial.needsUpdate = true;
-
-    function animateEjectedStatic(now) {
-      if (transitionToken !== screenTransitionToken) return;
-      if (now - startedAt < duration) {
-        drawStaticFrame(context, Math.floor(now / 32));
-        texture.needsUpdate = true;
-        staticAnimationId = requestAnimationFrame(animateEjectedStatic);
-        return;
-      }
-      showEjectedScreen();
-    }
-
-    staticAnimationId = requestAnimationFrame(animateEjectedStatic);
-  }
-
   onVisible(container, () => onIdle(() => {
-    buildStaticNoiseFrames();
     loadSharedModel("assets/models/television.mtl", "assets/models/television.obj").then((template) => {
       const model = template.clone();
       television = model;
@@ -528,7 +416,7 @@ diffuseColor.rgb += vec3(crtJitter * crtEdge * 0.12);` : ""}`
 
   function render(time) {
     actionUniforms.crtTime.value = time * 0.001;
-    if (cassetteInserted && !staticAnimationId && time - lastScreenDrawAt >= SCREEN_REDRAW_INTERVAL_MS) {
+    if (cassetteInserted && time - lastScreenDrawAt >= SCREEN_REDRAW_INTERVAL_MS) {
       drawProjectScreen(canvas, projects[activeProjectIndex], activeProjectIndex);
       texture.needsUpdate = true;
       lastScreenDrawAt = time;
@@ -543,7 +431,7 @@ diffuseColor.rgb += vec3(crtJitter * crtEdge * 0.12);` : ""}`
   function update(projectIndex, isEjected = false, animate = true) {
     if (isEjected) {
       cassetteInserted = false;
-      playEjectedStatic();
+      showEjectedScreen();
       return;
     }
 
@@ -558,13 +446,11 @@ diffuseColor.rgb += vec3(crtJitter * crtEdge * 0.12);` : ""}`
       screenMaterial.needsUpdate = true;
     }
     if (animate) {
-      playStaticTransition(projectIndex);
+      showProjectScreen(projectIndex);
       return;
     }
 
     screenTransitionToken += 1;
-    cancelAnimationFrame(staticAnimationId);
-    clearTimeout(staticTimeoutId);
     drawProjectScreen(canvas, projects[projectIndex], projectIndex);
     texture.needsUpdate = true;
     syncFullscreenScreen();
@@ -582,7 +468,7 @@ diffuseColor.rgb += vec3(crtJitter * crtEdge * 0.12);` : ""}`
     triggerAction(action) {
       if (action === "red") {
         if (cassetteInserted) ejectHandler?.();
-        else playEjectedStatic();
+        else showEjectedScreen();
       }
       if (action === "blue") {
         if (cassetteInserted) projectOpenHandler?.(activeProjectIndex);

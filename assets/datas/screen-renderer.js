@@ -22,14 +22,14 @@ function wrapText(context, text, maxWidth) {
 }
 
 function drawBadge(context, text, x, y, color = "#4fc1bb") {
-  context.font = "500 10px 'DM Mono', monospace";
-  const width = context.measureText(text).width + 18;
+  context.font = "500 12px 'DM Mono', monospace";
+  const width = context.measureText(text).width + 22;
   context.strokeStyle = color;
-  context.lineWidth = 1;
-  context.strokeRect(x, y - 14, width, 24);
+  context.lineWidth = 1.2;
+  context.strokeRect(x, y - 16, width, 28);
   context.fillStyle = color;
-  context.fillText(text, x + 9, y + 2);
-  return x + width + 8;
+  context.fillText(text, x + 11, y + 3);
+  return x + width + 10;
 }
 
 export function drawProjectScreen(canvas, project, index, isEjected = false, requestedScale = 1) {
@@ -69,16 +69,16 @@ export function drawProjectScreen(canvas, project, index, isEjected = false, req
     context.fillText("Insérez une cassette pour découvrir un projet.", 82, 284);
   } else {
     context.fillStyle = "#91aaa4";
-    context.font = "500 11px 'DM Mono', monospace";
-    context.fillText(project.date || `ARCHIVE / 0${index + 1}`, 82, 48);
-    context.fillText("FERMER  X", 790, 48);
+    context.font = "500 13px 'DM Mono', monospace";
+    context.fillText(project.date || `ARCHIVE / 0${index + 1}`, 82, 52);
+    context.fillText("FERMER  X", 782, 52);
 
     context.fillStyle = "#b9e8dc";
     context.shadowColor = "rgba(185, 232, 220, .25)";
-    context.shadowBlur = 6;
-    context.font = "400 58px 'Bebas Neue', sans-serif";
+    context.shadowBlur = 8;
+    context.font = "400 68px 'Bebas Neue', sans-serif";
     const title = project.title.replace("<br>", "\n").split("\n");
-    title.forEach((line, lineIndex) => context.fillText(line, 82, 136 + lineIndex * 52));
+    title.forEach((line, lineIndex) => context.fillText(line, 82, 150 + lineIndex * 62));
     context.shadowBlur = 0;
 
     const toolsMatch = project.projectMeta?.match(/sheet-tools">([\s\S]*?)<\/div><div class="sheet-tags/);
@@ -95,21 +95,21 @@ export function drawProjectScreen(canvas, project, index, isEjected = false, req
     });
 
     context.fillStyle = "#eee9d8";
-    context.font = "500 20px 'Space Grotesk', sans-serif";
-    wrapText(context, project.lead || project.description, 796).slice(0, 2).forEach((line, lineIndex) => {
-      context.fillText(line, 82, 260 + lineIndex * 22);
+    context.font = "500 24px 'Space Grotesk', sans-serif";
+    wrapText(context, project.lead || project.description, 820).slice(0, 2).forEach((line, lineIndex) => {
+      context.fillText(line, 82, 274 + lineIndex * 28);
     });
 
     const sections = [...(project.content || "").matchAll(/<h3>(.*?)<\/h3>\s*<p>(.*?)<\/p>/g)].slice(0, 2);
     let sectionX = 82;
     sections.forEach(([fullMatch, heading, body]) => {
       context.fillStyle = "#4fc1bb";
-      context.font = "500 11px 'DM Mono', monospace";
-      context.fillText(cleanText(heading), sectionX, 340);
+      context.font = "500 12px 'DM Mono', monospace";
+      context.fillText(cleanText(heading), sectionX, 348);
       context.fillStyle = "#aabbb3";
-      context.font = "400 13px 'Space Grotesk', sans-serif";
-      wrapText(context, cleanText(body), 360).slice(0, 4).forEach((line, lineIndex) => {
-        context.fillText(line, sectionX, 364 + lineIndex * 16);
+      context.font = "400 15px 'Space Grotesk', sans-serif";
+      wrapText(context, cleanText(body), 380).slice(0, 4).forEach((line, lineIndex) => {
+        context.fillText(line, sectionX, 374 + lineIndex * 18);
       });
       sectionX = 500;
     });
