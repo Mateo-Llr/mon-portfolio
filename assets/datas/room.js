@@ -345,6 +345,7 @@ export function createRoomScene(container, projects = []) {
   let configuredPositions = {};
   let configuredCameraPositions = [];
   let presentationCameraPose = null;
+  let mainCameraPose = null;
   const scene = new THREE.Scene();
   window.__roomDebug = { scene, camera: null, editor: null };
   const CAMERA_FOV = 45;
@@ -1099,6 +1100,7 @@ export function createRoomScene(container, projects = []) {
     }
     refreshCameraPositionSelect();
     presentationCameraPose = configuredCameraPositions[2] || presentationCamera;
+    mainCameraPose = presentationCameraPose;
     activeInteractionCameraIndex = 2;
     camera.position.set(presentationCameraPose.position.x, presentationCameraPose.position.y, presentationCameraPose.position.z);
     editor.pitch = presentationCameraPose.rotation.x;
@@ -1243,7 +1245,7 @@ export function createRoomScene(container, projects = []) {
   function focusOnInitialView() {
     projectsFocusRequested = false;
     activeInteractionCameraIndex = 2;
-    focusCameraPose(presentationCameraPose || presentationCamera);
+    focusCameraPose(mainCameraPose || presentationCameraPose || presentationCamera);
   }
 
   function startIntroTransition() {
