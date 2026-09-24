@@ -40,7 +40,7 @@ button { cursor: pointer; }
 .studio::before { content: ""; position: absolute; inset: 0; z-index: -4; background: #202823; }
 .studio::after { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .18; pointer-events: none; background-image: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.16) 4px), repeating-linear-gradient(90deg, rgba(220,215,190,.035) 0 1px, transparent 1px 8px); }
 .room-model { position: absolute; z-index: 0; inset: 0; overflow: hidden; background: #202823; pointer-events: auto; }
-.room-model canvas { display: block; width: 100%; height: 100%; }
+.room-model canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .contact-scene-tab {
   position: fixed;
   left: 18px;
@@ -344,7 +344,7 @@ body.is-sheet-open { overflow: hidden; }
 .trophy-panel-meta-line { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 14px; align-items: baseline; }
 .trophy-panel-label { color: rgba(169, 171, 159, .72); font: 9px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
 .trophy-panel-value { color: #ece4d2; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; }
-@media (max-width: 760px) { .trophy-panel { width: 100%; padding: 0 16px 16px; align-items: flex-end; } .trophy-panel-inner { padding: 20px 24px 28px; } .trophy-panel-title-wrap { align-items: flex-start; flex-direction: column; gap: 18px; } .trophy-panel-type { max-width: none; padding: 0 0 0 12px; text-align: left; } .trophy-panel-body { gap: 18px; } .trophy-panel-meta-line { grid-template-columns: 1fr; gap: 4px; } }
+@media (max-width: 760px) { .trophy-panel { left: 0; right: 0; width: 100%; padding: 0 16px 16px; align-items: flex-end; } .trophy-panel-inner { padding: 20px 24px 28px; } .trophy-panel-title-wrap { align-items: flex-start; flex-direction: column; gap: 18px; } .trophy-panel-type { max-width: none; padding: 0 0 0 12px; text-align: left; } .trophy-panel-body { gap: 18px; } .trophy-panel-meta-line { grid-template-columns: 1fr; gap: 4px; } }
 @media (max-width: 600px) { .project-sheet { padding: 0; }.sheet-panel { width: 100%; max-height: 100dvh; min-height: 100dvh; border-width: 0 0 1px; }.sheet-body { max-height: calc(100dvh - 54px); padding: 34px 22px 52px; }.sheet-toolbar { padding: 16px 18px; }.sheet-body h2 { font-size: clamp(48px, 18vw, 82px); }.sheet-content { font-size: 14px; } }
 
 html, body, button, a { cursor: url("assets/cursors/Normal%20Select.cur"), auto; }

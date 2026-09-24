@@ -390,7 +390,11 @@ export function createRoomScene(container, projects = []) {
   // showcased trophy stay put in the foreground while the room camera is
   // otherwise free to keep doing its normal thing behind it.
   const trophyShowcaseAnchor = new THREE.Object3D();
-  trophyShowcaseAnchor.position.set(-0.9, -0.42, -2.8);
+  function updateTrophyShowcaseAnchor() {
+    const isMobile = window.matchMedia?.("(max-width: 760px)")?.matches;
+    trophyShowcaseAnchor.position.set(isMobile ? 0 : -0.9, isMobile ? 1.15 : -0.42, -2.8);
+  }
+  updateTrophyShowcaseAnchor();
   camera.add(trophyShowcaseAnchor);
   scene.add(camera);
   renderer.shadowMap.autoUpdate = false;
@@ -1233,7 +1237,7 @@ export function createRoomScene(container, projects = []) {
   function focusOnInitialView() {
     projectsFocusRequested = false;
     activeInteractionCameraIndex = 2;
-    focusCameraPose(presentationCamera);
+    focusCameraPose(presentationCameraPose || presentationCamera);
   }
 
   function startIntroTransition() {
@@ -1247,8 +1251,8 @@ export function createRoomScene(container, projects = []) {
     editor.pitch = introCamera.rotation.x;
     editor.yaw = introCamera.rotation.y;
     applyCameraRotation();
-    cameraTransition = null;
-    introTransitionPending = true;
+    introTransitionPending = false;
+    focusOnInitialView();
   }
 
   function focusOnAchievements() {
@@ -2141,6 +2145,7 @@ export function createRoomScene(container, projects = []) {
   function resize() {
     renderer.setSize(container.clientWidth, container.clientHeight, false);
     updateCameraProjection();
+    updateTrophyShowcaseAnchor();
     composer.setSize(container.clientWidth, container.clientHeight);
     outlinePass.resolution.set(container.clientWidth, container.clientHeight);
     updateCanvasBounds();
@@ -2591,8 +2596,12 @@ export function createRoomScene(container, projects = []) {
     const dy = event.clientY - showcaseDragState.startY;
     showcaseTilt.y = showcaseDragState.startTiltY + dx * 0.008;
     showcaseTilt.x = THREE.MathUtils.clamp(showcaseDragState.startTiltX + dy * 0.005, -0.9, 0.9);
+    event.preventDefault();
   });
   renderer.domElement.addEventListener("pointerup", () => {
+    showcaseDragState = null;
+  });
+  renderer.domElement.addEventListener("pointercancel", () => {
     showcaseDragState = null;
   });
   renderer.domElement.addEventListener("pointerleave", () => {
