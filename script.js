@@ -214,7 +214,7 @@ async function scheduleThreeSceneInitialization() {
     startupLoader.querySelector("strong").textContent = "Construction de la scène 3D";
     startupLoaderBar.style.width = "78%";
     startupLoaderProgress.textContent = "Chargement 78 %";
-    const { createRoomScene } = await import("./assets/datas/room.js?v=plain-wall-text-smooth-40");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=plain-wall-text-smooth-42");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);

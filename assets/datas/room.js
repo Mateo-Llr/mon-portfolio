@@ -392,7 +392,8 @@ export function createRoomScene(container, projects = []) {
   const trophyShowcaseAnchor = new THREE.Object3D();
   function updateTrophyShowcaseAnchor() {
     const isMobile = window.matchMedia?.("(max-width: 760px)")?.matches;
-    trophyShowcaseAnchor.position.set(isMobile ? 0 : -0.9, isMobile ? 1.15 : -0.42, -2.8);
+    const isCompactMobile = window.matchMedia?.("(max-width: 380px)")?.matches;
+    trophyShowcaseAnchor.position.set(isMobile ? 0 : -0.9, isCompactMobile ? 1.55 : isMobile ? 1.35 : -0.42, -2.8);
   }
   updateTrophyShowcaseAnchor();
   camera.add(trophyShowcaseAnchor);
@@ -849,7 +850,12 @@ export function createRoomScene(container, projects = []) {
       toPosition: new THREE.Vector3(0, -0.24, 0),
       toRotation: new THREE.Euler(0, SHOWCASE_BASE_ROTATION_Y, 0),
       toQuaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, SHOWCASE_BASE_ROTATION_Y, 0)),
-      toScale: new THREE.Vector3(SHOWCASE_FRONT_SCALE, SHOWCASE_FRONT_SCALE, SHOWCASE_FRONT_SCALE),
+      toScale: (() => {
+        const isMobile = window.matchMedia?.("(max-width: 760px)")?.matches;
+        const isCompactMobile = window.matchMedia?.("(max-width: 380px)")?.matches;
+        const scale = isCompactMobile ? 1.35 : isMobile ? 1.65 : SHOWCASE_FRONT_SCALE;
+        return new THREE.Vector3(scale, scale, scale);
+      })(),
       closing: false
     };
     showcaseTilt.x = 0;
