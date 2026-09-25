@@ -76,19 +76,33 @@ export function drawProjectScreen(canvas, project, index, isEjected = false, req
     context.fillStyle = "#b9e8dc";
     context.shadowColor = "rgba(185, 232, 220, .25)";
     context.shadowBlur = 8;
-    context.font = "400 68px 'Bebas Neue', sans-serif";
-    const title = project.title.replace("<br>", "\n").split("\n");
-    title.forEach((line, lineIndex) => context.fillText(line, 82, 150 + lineIndex * 62));
+    const titleImage = project.gameTitleTexture;
+    if (titleImage?.naturalWidth) {
+      const maxWidth = 460;
+      const maxHeight = 144;
+      const imageScale = Math.min(maxWidth / titleImage.naturalWidth, maxHeight / titleImage.naturalHeight);
+      const imageWidth = titleImage.naturalWidth * imageScale;
+      const imageHeight = titleImage.naturalHeight * imageScale;
+      context.save();
+      context.shadowBlur = 0;
+      context.imageSmoothingEnabled = false;
+      context.drawImage(titleImage, 82, 88 + (maxHeight - imageHeight) / 2, imageWidth, imageHeight);
+      context.restore();
+    } else {
+      context.font = "400 68px 'Bebas Neue', sans-serif";
+      const title = project.title.replace("<br>", "\n").split("\n");
+      title.forEach((line, lineIndex) => context.fillText(line, 82, 150 + lineIndex * 62));
+    }
     context.shadowBlur = 0;
 
     const toolsMatch = project.projectMeta?.match(/sheet-tools">([\s\S]*?)<\/div><div class="sheet-tags/);
     const tools = toolsMatch ? [...toolsMatch[1].matchAll(/<span>(.*?)<\/span>/g)].map((match) => cleanText(match[1])) : [];
     const tags = [...(project.projectMeta || "").matchAll(/sheet-tags">(.*?)<\/div>/g)].flatMap((match) => [...match[1].matchAll(/<span>(.*?)<\/span>/g)].map((tag) => cleanText(tag[1])));
-    let badgeX = 500;
+    let badgeX = 580;
     tools.forEach((tool) => {
       badgeX = drawBadge(context, tool, badgeX, 126, "#b9e8dc");
     });
-    badgeX = 500;
+    badgeX = 580;
     tags.slice(0, 4).forEach((tag) => {
       badgeX = drawBadge(context, tag, badgeX, 164, "#4fc1bb");
       if (badgeX > 900) badgeX = 570;

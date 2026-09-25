@@ -649,6 +649,14 @@ body.is-projects-focus .cassette-stage { opacity: 1; transition: opacity .35s ea
   color: var(--sheet-highlight);
   text-shadow: 0 0 22px rgba(101, 198, 194, .14);
 }
+.sheet-game-title-image {
+  display: block;
+  width: min(100%, 650px);
+  height: clamp(112px, 12.5vw, 180px);
+  object-fit: contain;
+  object-position: left center;
+  image-rendering: pixelated;
+}
 .project-sheet .sheet-rule { background: var(--sheet-accent); }
 .project-sheet .sheet-content h3 { color: var(--sheet-accent); }
 .project-sheet .sheet-tags span {

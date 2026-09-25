@@ -26,6 +26,8 @@ projects.push({
   projectMeta: "<div class=\"sheet-tools\"><div class=\"sheet-tool\"><img src=\"assets/textures/icons/html.svg\" alt=\"Icône HTML\"><span>HTML</span></div><div class=\"sheet-tool\"><img src=\"assets/textures/icons/javascript.svg\" alt=\"Icône JavaScript\"><span>JAVASCRIPT</span></div></div><div class=\"sheet-tags\"><span>MINAGE</span><span>EXPLORATION</span><span>PIXEL ART</span><span>GESTION DES RESSOURCES</span></div>",
   content: "<h3>Le principe du jeu</h3><p>Le joueur incarne un petit personnage équipé d'une tête de foreuse. Il descend sous la surface d'une planète pour trouver des minerais, puis remonte à la surface afin d'améliorer ses performances.</p><h3>Une descente à gérer</h3><p>Chaque expédition demande de surveiller la batterie, l'énergie, la chaleur ambiante et le poids maximal que le personnage peut transporter.</p><h3>Un projet en développement</h3><p>Deep Driller est créé en HTML et JavaScript dans un style pixel art très rétro et minimaliste.</p><div class=\"sheet-gallery-block\"><h3>Images du projet</h3><div class=\"sheet-gallery\"><img src=\"assets/projects/deep_driller/deep_driller_1.png\" alt=\"Écran de jeu de Deep Driller\"><img src=\"assets/projects/deep_driller/deep_driller_2.png\" alt=\"Exploration souterraine dans Deep Driller\"><img src=\"assets/projects/deep_driller/deep_driller_3.png\" alt=\"Interface de Deep Driller\"><img src=\"assets/projects/deep_driller/deep_driller_4.png\" alt=\"Personnage de Deep Driller\"></div></div>"
 });
+projects[0].gameTitleImage = "assets/projects/soulfract/game_title.png";
+projects[1].gameTitleImage = "assets/projects/rust_and_roots/game_title.png";
 
 const trophies = {
   "scratch-trophy": {
@@ -192,7 +194,8 @@ async function scheduleThreeSceneInitialization() {
       "assets/textures/icons/vscode.png",
       "assets/textures/icons/github.png",
       "assets/textures/icons/blockbench.png",
-      "assets/textures/icons/case.png"
+      "assets/textures/icons/case.png",
+      ...projects.map((project) => project.gameTitleImage).filter(Boolean)
     ];
     startupLoader.querySelector("strong").textContent = "Chargement des textures";
     let loadedImages = 0;
@@ -205,7 +208,11 @@ async function scheduleThreeSceneInitialization() {
         startupLoaderProgress.textContent = `Chargement ${progress} %`;
         resolve();
       };
-      image.onload = finish;
+      image.onload = () => {
+        const project = projects.find((entry) => entry.gameTitleImage === path);
+        if (project) project.gameTitleTexture = image;
+        finish();
+      };
       image.onerror = finish;
       image.src = path;
     })));
@@ -294,7 +301,9 @@ function openProjectSheet(index) {
 
   sheetKicker.textContent = project.date || `ARCHIVE / 0${index + 1}`;
   sheetIndex.textContent = `PROJECT 0${index + 1}`;
-  sheetTitle.innerHTML = project.title;
+  sheetTitle.innerHTML = project.gameTitleTexture
+    ? `<img class="sheet-game-title-image" src="${project.gameTitleImage}" alt="${project.title.replace(/<br>/g, " ")}">`
+    : project.title;
   sheetMeta.innerHTML = project.meta;
   sheetProjectMeta.innerHTML = project.projectMeta || "";
   sheetLead.textContent = project.lead;
