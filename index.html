@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=game-title-scale-14" />
+    <link rel="stylesheet" href="styles.css?v=desktop-notepad-2" />
     <script>
       const resizeDesignCanvas = () => {
         const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
@@ -45,6 +45,37 @@
       <div class="table-edge" aria-hidden="true"></div>
 
     </main>
+    <section class="desktop-screen" id="desktopScreen" aria-hidden="true" inert aria-label="Bureau Windows du portfolio">
+      <div class="desktop-topbar">
+        <span class="desktop-brand"><span class="desktop-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span> MATEO / PORTFOLIO</span>
+        <button class="desktop-exit" type="button" data-close-desktop>RETOUR À LA PIÈCE <span aria-hidden="true">↗</span></button>
+      </div>
+      <div class="desktop-shortcuts" role="list" aria-label="Applications du bureau">
+        <div class="desktop-shortcut" role="listitem"><img class="desktop-app-icon" src="assets/textures/desktop/icon_chrome.png" alt=""><span>Google Chrome</span></div>
+        <button class="desktop-shortcut" type="button" role="listitem" data-launch-notepad><img class="desktop-app-icon" src="assets/textures/desktop/icon_notes.png" alt=""><span>Bloc-notes</span></button>
+        <div class="desktop-shortcut" role="listitem"><img class="desktop-app-icon" src="assets/textures/desktop/icon_folder.png" alt=""><span>Explorateur de fichiers</span></div>
+      </div>
+      <div class="desktop-selection" id="desktopSelection" aria-hidden="true" hidden></div>
+      <section class="notepad-window" id="notepadWindow" role="dialog" aria-label="Bloc-notes — Création du portfolio" aria-hidden="true" hidden>
+        <header class="notepad-titlebar" id="notepadTitlebar">
+          <span class="notepad-window-name"><img src="assets/textures/desktop/icon_notes.png" alt=""><span>Création du portfolio - Bloc-notes</span></span>
+          <div class="notepad-window-controls">
+            <button type="button" data-notepad-minimize aria-label="Réduire le Bloc-notes" title="Réduire">−</button>
+            <button type="button" data-notepad-maximize aria-label="Agrandir ou restaurer le Bloc-notes" title="Agrandir">□</button>
+            <button type="button" data-notepad-close aria-label="Fermer le Bloc-notes" title="Fermer">×</button>
+          </div>
+        </header>
+        <div class="notepad-tab"><span>Création du portfolio.txt</span><span aria-hidden="true">×</span></div>
+        <textarea class="notepad-editor" id="notepadEditor" aria-label="Contenu du Bloc-notes" spellcheck="false"></textarea>
+        <footer class="notepad-statusbar"><span id="notepadPosition">Ln 1, Col 1</span><span id="notepadSaveStatus">Texte brut</span></footer>
+      </section>
+      <div class="desktop-taskbar">
+        <span class="desktop-taskbar-start" aria-hidden="true"><span class="desktop-mark"><i></i><i></i><i></i><i></i></span></span>
+        <span class="desktop-taskbar-title">Bureau</span>
+        <button class="notepad-taskbar-item" type="button" data-notepad-restore hidden><img src="assets/textures/desktop/icon_notes.png" alt=""><span>Création du portfolio</span></button>
+        <span class="desktop-clock" id="desktopClock"></span>
+      </div>
+    </section>
     <aside class="project-sheet" id="projectSheet" aria-hidden="true" aria-labelledby="sheetTitle">
       <div class="sheet-backdrop" data-close-sheet></div>
       <div class="sheet-panel" role="dialog" aria-modal="true">
@@ -86,6 +117,6 @@
         </div>
       </div>
     </aside>
-    <script type="module" src="script.js?v=plain-wall-text-smooth-39"></script>
+    <script type="module" src="script.js?v=desktop-notepad-2"></script>
   </body>
 </html>

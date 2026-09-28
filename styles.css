@@ -41,6 +41,47 @@ button { cursor: pointer; }
 .studio::after { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .18; pointer-events: none; background-image: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.16) 4px), repeating-linear-gradient(90deg, rgba(220,215,190,.035) 0 1px, transparent 1px 8px); }
 .room-model { position: absolute; z-index: 0; inset: 0; overflow: hidden; background: #202823; pointer-events: auto; }
 .room-model canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.desktop-screen { position: fixed; inset: 0; z-index: 34; overflow: hidden; visibility: hidden; opacity: 0; transform: scale(1.08); color: #f6f7f8; image-rendering: pixelated; background: #101820 url("assets/textures/desktop/wallpaper.png") center / cover no-repeat; transition: opacity .45s ease, transform .7s cubic-bezier(.2,.75,.2,1), visibility .45s; }
+.desktop-screen::before { content: ""; position: absolute; inset: 0; background: rgba(8, 16, 22, .12); pointer-events: none; }
+.desktop-screen.is-visible { visibility: visible; opacity: 1; transform: scale(1); }
+.desktop-topbar { position: absolute; z-index: 1; inset: 24px 30px auto; display: flex; align-items: center; justify-content: space-between; }
+.desktop-brand { display: flex; align-items: center; gap: 12px; font: 500 11px var(--mono); letter-spacing: .08em; text-shadow: 0 1px 8px rgba(0, 26, 60, .5); }
+.desktop-mark { display: grid; grid-template-columns: repeat(2, 7px); gap: 2px; width: 16px; height: 16px; }
+.desktop-mark i { display: block; background: #f6f7f8; }
+.desktop-exit { border: 1px solid rgba(255,255,255,.48); padding: 10px 13px; color: #fff; background: rgba(9, 39, 82, .24); font: 500 9px var(--mono); letter-spacing: .06em; }
+.desktop-exit span { margin-left: 10px; }
+.desktop-shortcuts { position: absolute; z-index: 1; top: 100px; left: 28px; display: grid; gap: 12px; }
+.desktop-shortcut { display: grid; justify-items: center; gap: 7px; width: 112px; min-height: 96px; padding: 9px 4px; border: 1px solid transparent; color: #fff; background: transparent; font: 500 9px var(--mono); text-align: center; text-shadow: 0 1px 5px rgba(0, 20, 50, .85); }
+.desktop-shortcut[data-launch-notepad] { cursor: pointer; }
+.desktop-shortcut[data-launch-notepad]:hover, .desktop-shortcut[data-launch-notepad]:focus-visible { border-color: rgba(255,255,255,.38); outline: none; background: rgba(233, 249, 255, .16); }
+.desktop-app-icon { display: block; width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated; }
+.desktop-selection { position: absolute; z-index: 3; border: 1px solid rgba(103, 177, 255, .95); background: rgba(50, 132, 255, .28); pointer-events: none; }
+.desktop-selection[hidden] { display: none; }
+.notepad-window { position: absolute; z-index: 4; left: 50%; top: 50%; display: grid; grid-template-rows: 42px 34px minmax(0, 1fr) 25px; width: min(720px, calc(100vw - 28px)); height: min(520px, calc(100dvh - 112px)); min-width: min(320px, calc(100vw - 20px)); min-height: 220px; overflow: hidden; transform: translate(-50%, -50%); border: 1px solid #aab7c5; border-radius: 6px; background: #fff; color: #202630; box-shadow: 0 20px 55px rgba(0, 0, 0, .4); }
+.notepad-window[hidden], .notepad-taskbar-item[hidden] { display: none; }
+.notepad-window.is-maximized { inset: 10px 10px 68px; left: 10px; top: 10px; width: auto; height: auto; min-width: 0; min-height: 0; transform: none; }
+.notepad-titlebar { display: flex; align-items: center; justify-content: space-between; min-width: 0; padding-left: 12px; background: #f3f6fa; touch-action: none; user-select: none; cursor: grab; }
+.notepad-titlebar:active { cursor: grabbing; }
+.notepad-window-name { display: flex; align-items: center; gap: 9px; min-width: 0; overflow: hidden; font: 400 12px "Segoe UI", sans-serif; white-space: nowrap; text-overflow: ellipsis; }
+.notepad-window-name img { width: 20px; height: 20px; image-rendering: pixelated; }
+.notepad-window-controls { display: flex; align-self: stretch; }
+.notepad-window-controls button { width: 44px; border: 0; color: #29323d; background: transparent; font: 400 17px "Segoe UI", sans-serif; }
+.notepad-window-controls button:hover { background: #e4e9ef; }
+.notepad-window-controls [data-notepad-close]:hover { color: #fff; background: #c42b1c; }
+.notepad-tab { display: flex; align-items: center; gap: 28px; width: max-content; max-width: 100%; padding: 0 14px; border-bottom: 2px solid #2878d0; background: #fff; font: 400 11px "Segoe UI", sans-serif; }
+.notepad-editor { width: 100%; height: 100%; min-height: 0; padding: 18px 22px; resize: none; border: 0; outline: 0; color: #1f2328; background: #fff; font: 14px/1.65 Consolas, "Courier New", monospace; tab-size: 4; }
+.notepad-statusbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 12px; border-top: 1px solid #e4e8ed; color: #58636f; background: #f7f8fa; font: 10px "Segoe UI", sans-serif; }
+.notepad-taskbar-item { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 0; border-radius: 3px; color: #fff; background: rgba(255,255,255,.12); font: 10px var(--display); }
+.notepad-taskbar-item:hover { background: rgba(255,255,255,.22); }
+.notepad-taskbar-item img { width: 22px; height: 22px; image-rendering: pixelated; }
+.desktop-taskbar { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; height: 58px; display: flex; align-items: center; justify-content: center; gap: 13px; border-top: 1px solid rgba(255,255,255,.3); background: rgba(11, 31, 65, .48); }
+.desktop-taskbar-start { display: grid; place-items: center; width: 40px; height: 40px; }
+.desktop-taskbar-start .desktop-mark { grid-template-columns: repeat(2, 8px); width: 18px; height: 18px; }
+.desktop-taskbar-title { padding-left: 13px; border-left: 1px solid rgba(255,255,255,.32); font: 400 11px var(--display); }
+.desktop-clock { position: absolute; right: 24px; font: 400 12px var(--mono); }
+body.is-desktop-mode .studio { opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+@media (max-width: 600px) { .desktop-topbar { inset: 16px 16px auto; }.desktop-brand { font-size: 9px; }.desktop-exit { padding: 9px; font-size: 8px; }.desktop-shortcuts { top: 90px; left: 12px; gap: 4px; }.desktop-shortcut { width: 96px; font-size: 8px; }.notepad-window { width: calc(100vw - 20px); height: min(520px, calc(100dvh - 100px)); min-width: 0; }.notepad-window-controls button { width: 38px; }.notepad-editor { padding: 14px; font-size: 12px; }.notepad-taskbar-item { width: 40px; justify-content: center; padding: 0; }.notepad-taskbar-item span { display: none; }.desktop-clock { right: 15px; } }
+@media (prefers-reduced-motion: reduce) { .desktop-screen, body.is-desktop-mode .studio { transition-duration: .01ms; } }
 .contact-scene-tab {
   position: fixed;
   left: 18px;

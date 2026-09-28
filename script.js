@@ -91,6 +91,221 @@ const startupLoaderBar = document.querySelector("#startupLoaderBar");
 const startupLoaderProgress = document.querySelector("#startupLoaderProgress");
 const startupLoaderLog = document.querySelector("#startupLoaderLog");
 let trophyPanelReturnFocus = null;
+const desktopScreen = document.querySelector("#desktopScreen");
+const desktopSelection = document.querySelector("#desktopSelection");
+const desktopClock = document.querySelector("#desktopClock");
+const notepadWindow = document.querySelector("#notepadWindow");
+const notepadTitlebar = document.querySelector("#notepadTitlebar");
+const notepadEditor = document.querySelector("#notepadEditor");
+const notepadPosition = document.querySelector("#notepadPosition");
+const notepadSaveStatus = document.querySelector("#notepadSaveStatus");
+const notepadTaskbarButton = document.querySelector("[data-notepad-restore]");
+const NOTEPAD_STORAGE_KEY = "mateo-portfolio-notepad";
+const NOTEPAD_DEFAULT_TEXT = `CRÉATION DU PORTFOLIO
+
+ÉDITEUR DE CODE
+VS Code est l'éditeur de code principal utilisé pour créer le projet.
+
+VERSIONNAGE ET HÉBERGEMENT
+GitHub sert au versionnage et à l'hébergement du code.
+
+MODÉLISATION 3D
+Blockbench a servi à modéliser les objets de la pièce.`;
+let desktopDragStart = null;
+let notepadDragStart = null;
+let notepadRestoreBounds = null;
+
+function setDesktopVisible(isVisible) {
+  desktopScreen?.classList.toggle("is-visible", isVisible);
+  desktopScreen?.setAttribute("aria-hidden", String(!isVisible));
+  if (desktopScreen) desktopScreen.inert = !isVisible;
+  document.body.classList.toggle("is-desktop-mode", isVisible);
+  if (isVisible) updateDesktopClock();
+}
+
+function updateDesktopClock() {
+  if (desktopClock) desktopClock.textContent = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" }).format(new Date());
+}
+
+function updateNotepadPosition() {
+  const cursor = notepadEditor.selectionStart;
+  const beforeCursor = notepadEditor.value.slice(0, cursor);
+  const line = beforeCursor.split("\n").length;
+  const column = cursor - beforeCursor.lastIndexOf("\n");
+  notepadPosition.textContent = `Ln ${line}, Col ${column}`;
+}
+
+function saveNotepadText() {
+  try {
+    localStorage.setItem(NOTEPAD_STORAGE_KEY, notepadEditor.value);
+    notepadSaveStatus.textContent = "Enregistré";
+  } catch {
+    notepadSaveStatus.textContent = "Non enregistré";
+  }
+  updateNotepadPosition();
+}
+
+function openNotepad() {
+  if (!notepadEditor.value) {
+    notepadEditor.value = localStorage.getItem(NOTEPAD_STORAGE_KEY) ?? NOTEPAD_DEFAULT_TEXT;
+  }
+  notepadWindow.hidden = false;
+  notepadWindow.setAttribute("aria-hidden", "false");
+  notepadTaskbarButton.hidden = true;
+  notepadWindow.style.zIndex = "4";
+  updateNotepadPosition();
+  notepadEditor.focus({ preventScroll: true });
+}
+
+function closeNotepad() {
+  notepadWindow.hidden = true;
+  notepadWindow.setAttribute("aria-hidden", "true");
+  notepadWindow.classList.remove("is-maximized");
+  notepadWindow.style.left = "";
+  notepadWindow.style.top = "";
+  notepadWindow.style.width = "";
+  notepadWindow.style.height = "";
+  notepadWindow.style.transform = "";
+  notepadTaskbarButton.hidden = true;
+  notepadDragStart = null;
+}
+
+function minimizeNotepad() {
+  notepadWindow.hidden = true;
+  notepadWindow.setAttribute("aria-hidden", "true");
+  notepadTaskbarButton.hidden = false;
+  notepadTaskbarButton.focus({ preventScroll: true });
+}
+
+function toggleNotepadMaximize() {
+  if (notepadWindow.classList.contains("is-maximized")) {
+    notepadWindow.classList.remove("is-maximized");
+    Object.assign(notepadWindow.style, notepadRestoreBounds || {});
+    notepadRestoreBounds = null;
+    return;
+  }
+  notepadRestoreBounds = {
+    left: notepadWindow.style.left,
+    top: notepadWindow.style.top,
+    width: notepadWindow.style.width,
+    height: notepadWindow.style.height,
+    transform: notepadWindow.style.transform
+  };
+  notepadWindow.classList.add("is-maximized");
+}
+
+function moveNotepad(event) {
+  if (!notepadDragStart || event.pointerId !== notepadDragStart.pointerId) return;
+  const bounds = desktopScreen.getBoundingClientRect();
+  const maxLeft = bounds.width - notepadWindow.offsetWidth;
+  const maxTop = bounds.height - 58 - notepadWindow.offsetHeight;
+  const left = Math.max(0, Math.min(maxLeft, event.clientX - bounds.left - notepadDragStart.offsetX));
+  const top = Math.max(0, Math.min(maxTop, event.clientY - bounds.top - notepadDragStart.offsetY));
+  notepadWindow.style.left = `${left}px`;
+  notepadWindow.style.top = `${top}px`;
+}
+
+function endNotepadMove(event) {
+  if (!notepadDragStart || event.pointerId !== notepadDragStart.pointerId) return;
+  notepadDragStart = null;
+}
+
+document.querySelector("[data-launch-notepad]")?.addEventListener("click", openNotepad);
+document.querySelector("[data-notepad-close]")?.addEventListener("click", closeNotepad);
+document.querySelector("[data-notepad-minimize]")?.addEventListener("click", minimizeNotepad);
+document.querySelector("[data-notepad-maximize]")?.addEventListener("click", toggleNotepadMaximize);
+notepadTaskbarButton?.addEventListener("click", openNotepad);
+notepadEditor?.addEventListener("input", saveNotepadText);
+notepadEditor?.addEventListener("click", updateNotepadPosition);
+notepadEditor?.addEventListener("keyup", updateNotepadPosition);
+notepadEditor?.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+    event.preventDefault();
+    saveNotepadText();
+  }
+});
+notepadTitlebar?.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 || event.target.closest(".notepad-window-controls") || notepadWindow.classList.contains("is-maximized")) return;
+  const windowBounds = notepadWindow.getBoundingClientRect();
+  const desktopBounds = desktopScreen.getBoundingClientRect();
+  notepadWindow.style.left = `${windowBounds.left - desktopBounds.left}px`;
+  notepadWindow.style.top = `${windowBounds.top - desktopBounds.top}px`;
+  notepadWindow.style.width = `${windowBounds.width}px`;
+  notepadWindow.style.height = `${windowBounds.height}px`;
+  notepadWindow.style.transform = "none";
+  notepadDragStart = {
+    pointerId: event.pointerId,
+    offsetX: event.clientX - windowBounds.left,
+    offsetY: event.clientY - windowBounds.top
+  };
+  notepadTitlebar.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+notepadTitlebar?.addEventListener("pointermove", moveNotepad);
+notepadTitlebar?.addEventListener("pointerup", endNotepadMove);
+notepadTitlebar?.addEventListener("pointercancel", endNotepadMove);
+notepadTitlebar?.addEventListener("lostpointercapture", endNotepadMove);
+
+function closeDesktop() {
+  closeProjectSheet();
+  desktopDragStart = null;
+  if (desktopSelection) desktopSelection.hidden = true;
+  if (!desktopScreen?.classList.contains("is-visible")) {
+    setDesktopVisible(false);
+    roomScene.focusOnInitialView(null, 850);
+    return;
+  }
+
+  let returnStarted = false;
+  let fallbackTimer = 0;
+  const finishScreenOff = () => {
+    if (returnStarted) return;
+    returnStarted = true;
+    window.clearTimeout(fallbackTimer);
+    desktopScreen.removeEventListener("transitionend", handleScreenTransitionEnd);
+    setDesktopVisible(false);
+    roomScene.focusOnInitialView(null, 850);
+  };
+  const handleScreenTransitionEnd = (event) => {
+    if (event.target === desktopScreen && event.propertyName === "opacity") finishScreenOff();
+  };
+
+  desktopScreen.addEventListener("transitionend", handleScreenTransitionEnd);
+  desktopScreen.classList.remove("is-visible");
+  fallbackTimer = window.setTimeout(finishScreenOff, 500);
+}
+
+function updateDesktopSelection(event) {
+  if (!desktopDragStart || event.pointerId !== desktopDragStart.pointerId) return;
+  const left = Math.min(desktopDragStart.x, event.clientX);
+  const top = Math.min(desktopDragStart.y, event.clientY);
+  const width = Math.abs(event.clientX - desktopDragStart.x);
+  const height = Math.abs(event.clientY - desktopDragStart.y);
+  if (width < 3 && height < 3) return;
+  const bounds = desktopScreen.getBoundingClientRect();
+  desktopSelection.style.left = `${left - bounds.left}px`;
+  desktopSelection.style.top = `${top - bounds.top}px`;
+  desktopSelection.style.width = `${width}px`;
+  desktopSelection.style.height = `${height}px`;
+  desktopSelection.hidden = false;
+}
+
+function endDesktopSelection(event) {
+  if (!desktopDragStart || event.pointerId !== desktopDragStart.pointerId) return;
+  desktopDragStart = null;
+  desktopSelection.hidden = true;
+}
+
+desktopScreen?.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 || event.target.closest(".desktop-topbar, .desktop-shortcuts, .desktop-taskbar, .notepad-window")) return;
+  desktopDragStart = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+  desktopScreen.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+desktopScreen?.addEventListener("pointermove", updateDesktopSelection);
+desktopScreen?.addEventListener("pointerup", endDesktopSelection);
+desktopScreen?.addEventListener("pointercancel", endDesktopSelection);
+desktopScreen?.addEventListener("lostpointercapture", endDesktopSelection);
 
 let roomScene = {
   updateScreen() {},
@@ -221,14 +436,20 @@ async function scheduleThreeSceneInitialization() {
     startupLoader.querySelector("strong").textContent = "Construction de la scène 3D";
     startupLoaderBar.style.width = "78%";
     startupLoaderProgress.textContent = "Chargement 78 %";
-    const { createRoomScene } = await import("./assets/datas/room.js?v=plain-wall-text-smooth-42");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=desktop-notepad-1");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);
     roomScene.onProjectsFocusReached(() => roomScene.activateTelevisionFeatures());
     roomScene.setCassetteSelectHandler((index) => selectProject(index));
     roomScene.setCupHandler(() => roomScene.focusOnCameraIndex(9));
-    roomScene.setLaptopHandler(() => roomScene.focusOnCameraIndex(3));
+    roomScene.setLaptopHandler((action) => {
+      if (action === "desktop") {
+        roomScene.focusOnCameraIndex(1, () => setDesktopVisible(true));
+      } else {
+        roomScene.focusOnCameraIndex(3);
+      }
+    });
     roomScene.setReturnHandler(() => roomScene.focusOnInitialView());
     roomScene.setProjectsHandler(() => roomScene.focusOnAchievements());
     roomScene.setTrophySelectHandler((id) => openTrophyPanel(id));
@@ -364,4 +585,10 @@ document.querySelectorAll("[data-close-sheet]").forEach((element) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeProjectSheet();
+});
+
+document.querySelector("[data-close-desktop]")?.addEventListener("click", closeDesktop);
+window.setInterval(updateDesktopClock, 30_000);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && desktopScreen?.classList.contains("is-visible")) closeDesktop();
 });

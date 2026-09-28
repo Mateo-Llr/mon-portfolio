@@ -1221,12 +1221,12 @@ export function createRoomScene(container, projects = []) {
     focusCameraPose(target);
   }
 
-  function focusCameraPose(target) {
+  function focusCameraPose(target, onComplete = null, duration = 1300) {
     if (!target || editor.active) return;
     outlinePass.selectedObjects = [];
     cameraTransition = {
       startedAt: performance.now(),
-      duration: 1300,
+      duration,
       fromPosition: camera.position.clone(),
       fromPitch: editor.pitch,
       fromYaw: editor.yaw,
@@ -1238,14 +1238,15 @@ export function createRoomScene(container, projects = []) {
       // GC pressure is exactly the kind of thing that reads as invisible on
       // a static scene but shows up as a visible stutter mid-pan.
       toPosition: new THREE.Vector3(target.position.x, target.position.y, target.position.z),
-      target
+      target,
+      onComplete
     };
   }
 
-  function focusOnInitialView() {
+  function focusOnInitialView(onComplete = null, duration = 1300) {
     projectsFocusRequested = false;
     activeInteractionCameraIndex = 2;
-    focusCameraPose(mainCameraPose || presentationCameraPose || presentationCamera);
+    focusCameraPose(mainCameraPose || presentationCameraPose || presentationCamera, onComplete, duration);
   }
 
   function startIntroTransition() {
@@ -1269,12 +1270,12 @@ export function createRoomScene(container, projects = []) {
     focusCameraPose(configuredCameraPositions[4]);
   }
 
-  function focusOnCameraIndex(index) {
+  function focusOnCameraIndex(index, onComplete = null) {
     const target = configuredCameraPositions[Number(index)];
     if (!target || editor.active) return;
     projectsFocusRequested = false;
     activeInteractionCameraIndex = Number(index);
-    focusCameraPose(target);
+    focusCameraPose(target, onComplete);
   }
 
   function applyPresentationCamera() {
@@ -1574,17 +1575,14 @@ export function createRoomScene(container, projects = []) {
     pin.rotation.x = Math.PI / 2;
     boardGroup.add(pin);
 
-    // Post-its: contacts and the tools used to build the site, pinned to
-    // the cork board. Placed with the same absolute-style local coordinates
+    // Contact and navigation notes pinned to the cork board. Placed with
+    // the same absolute-style local coordinates
     // as frame/cork/pin above, so the centerFurniturePivot() call below
     // picks them up and re-centers them along with everything else.
     const pinGeometry = new THREE.CylinderGeometry(0.032, 0.032, 0.06, 10);
     const pinMaterial = material(0x8e7d66, 0.35);
     const stickyNotes = [
       { title: "CONTACT", lines: ["mateoleuillier", "@outlook.fr"], color: "#f7dd66", x: 9.12, y: 4.54, z: -5.665, rotationZ: -0.07, interactionType: "mailto", actionUrl: "mailto:mateoleuillier@outlook.fr", iconPath: "assets/textures/icons/contact.png" },
-      { title: "VS CODE", lines: ["Éditeur de code", "principal"], color: "#7fb8e0", x: 9.75, y: 4.43, z: -5.665, rotationZ: 0.05, iconPath: "assets/textures/icons/vscode.png" },
-      { title: "GITHUB", lines: ["Versionning &", "hébergement du code"], color: "#f2a65a", x: 10.38, y: 4.5, z: -5.665, rotationZ: 0.08, iconPath: "assets/textures/icons/github.png" },
-      { title: "BLOCKBENCH", lines: ["Modélisation 3D", "des objets de la pièce"], color: "#8fbf8a", x: 9.12, y: 3.76, z: -5.665, rotationZ: -0.05, iconPath: "assets/textures/icons/blockbench.png" },
       { title: "MENTIONS LÉGALES", lines: ["Portfolio", "personnel"], color: "#f2c6a0", x: 9.75, y: 3.86, z: -5.665, rotationZ: -0.08 },
       { title: "Retour", lines: [], color: "#d9534f", textColor: "#ffffff", x: 10.38, y: 3.74, z: -5.665, rotationZ: 0.12, interactionType: "return", iconPath: "assets/textures/icons/case.png" }
     ];
@@ -1955,24 +1953,41 @@ export function createRoomScene(container, projects = []) {
           material.map.needsUpdate = true;
         });
       });
-      const laptopScreenLabel = createPropLabel("MES PROJETS", {
-        fontSize: 52,
-        fontWeight: 700,
-        strokeWidth: 3,
-        width: 1.0,
-        height: 0.42,
-        canvasWidth: 900,
-        canvasHeight: 180,
-        textColor: "#ffffff",
-        outlineColor: "#111713",
-        backgroundColor: "transparent"
-      });
+      const laptopScreenCanvas = document.createElement("canvas");
+      laptopScreenCanvas.width = 900;
+      laptopScreenCanvas.height = 180;
+      const laptopScreenContext = laptopScreenCanvas.getContext("2d");
+      laptopScreenContext.textAlign = "center";
+      laptopScreenContext.textBaseline = "middle";
+      laptopScreenContext.lineWidth = 3;
+      laptopScreenContext.strokeStyle = "#111713";
+      laptopScreenContext.fillStyle = "#ffffff";
+      laptopScreenContext.font = "700 52px 'Space Grotesk', sans-serif";
+      laptopScreenContext.strokeText("MES PROJETS", 450, 46);
+      laptopScreenContext.fillText("MES PROJETS", 450, 46);
+      laptopScreenContext.strokeStyle = "rgba(255, 255, 255, .7)";
+      laptopScreenContext.lineWidth = 2;
+      laptopScreenContext.beginPath();
+      laptopScreenContext.moveTo(145, 90);
+      laptopScreenContext.lineTo(755, 90);
+      laptopScreenContext.stroke();
+      laptopScreenContext.font = "700 36px 'Space Grotesk', sans-serif";
+      laptopScreenContext.strokeStyle = "#111713";
+      laptopScreenContext.lineWidth = 3;
+      laptopScreenContext.strokeText("BUREAU WINDOWS", 450, 136);
+      laptopScreenContext.fillText("BUREAU WINDOWS", 450, 136);
+      const laptopScreenTexture = new THREE.CanvasTexture(laptopScreenCanvas);
+      laptopScreenTexture.colorSpace = THREE.SRGBColorSpace;
+      laptopScreenTexture.minFilter = THREE.NearestFilter;
+      laptopScreenTexture.magFilter = THREE.NearestFilter;
+      const laptopScreenLabel = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.0, 0.42),
+        new THREE.MeshBasicMaterial({ map: laptopScreenTexture, transparent: true, side: THREE.FrontSide, depthTest: true, depthWrite: true })
+      );
       laptopScreenLabel.position.set(0, 0.4, 0.35);
       laptopScreenLabel.rotation.set(0.35, Math.PI, 0);
-      laptopScreenLabel.material.side = THREE.FrontSide;
-      laptopScreenLabel.material.depthTest = true;
-      laptopScreenLabel.material.depthWrite = true;
       laptopScreenLabel.renderOrder = 20;
+      laptopScreenLabel.userData.interactionType = "laptop-screen";
       rawLaptop.add(laptopScreenLabel);
       roomLaptop.visible = false;
       scene.add(roomLaptop);
@@ -2233,6 +2248,9 @@ export function createRoomScene(container, projects = []) {
       if (isShelfObjectInteraction && !isOnSkillsCameraView()) return null;
       let hitObject = hit.object;
       while (hitObject) {
+        if (hitObject.userData?.interactionType === "laptop-screen") {
+          return { type: "laptop", action: (hit.uv?.y ?? 0) >= 0.5 ? "projects" : "desktop" };
+        }
         if (hitObject.name === "plant-return-label") return { type: "return-main" };
         if (hitObject.name === "my-photo-return-label") return { type: "about-return" };
         if (hitObject.name === "my-photo" || hitObject.name === "my-photo-label") return { type: "about-me" };
@@ -2407,7 +2425,7 @@ export function createRoomScene(container, projects = []) {
     if (interaction.type === "television") roomTelevisionHandler?.();
     if (interaction.type === "television-action") roomTelevisionActionHandler?.(interaction.action);
     if (interaction.type === "cup") roomCupHandler?.();
-    if (interaction.type === "laptop") roomLaptopHandler?.();
+    if (interaction.type === "laptop") roomLaptopHandler?.(interaction.action);
     if (interaction.type === "return-main") {
       focusOnInitialView();
       return;
@@ -2498,8 +2516,10 @@ export function createRoomScene(container, projects = []) {
         applyCameraRotation();
         if (progress >= 1) {
           presentationCameraPose = cameraTransition.target;
+          const onComplete = cameraTransition.onComplete;
           cameraTransition = null;
           notifyProjectsFocusReached();
+          onComplete?.();
         }
       } else if (presentationCameraPose && !introTransitionPending) {
         applyPresentationCamera();
