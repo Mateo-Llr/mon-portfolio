@@ -81,9 +81,9 @@ const trophies = {
     description: "SQL permet de consulter, organiser et modifier les données d'une base relationnelle."
   },
   "java-cup-trophy": {
-    title: "JAVA CUP",
-    meta: "OUTIL&nbsp;&nbsp; / &nbsp;&nbsp;GÉNÉRATEUR D'ANALYSEUR SYNTAXIQUE",
-    description: "Java CUP génère un analyseur syntaxique Java à partir d'une grammaire."
+    title: "JAVA",
+    meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;PROGRAMMATION ORIENTÉE OBJET",
+    description: "Java est un langage que j'étudie pour développer des applications et approfondir la programmation orientée objet."
   }
 };
 
@@ -382,7 +382,7 @@ async function scheduleThreeSceneInitialization() {
         await new Promise((resolve) => window.setTimeout(resolve, 50));
       }
     })();
-    const { loadSharedModel } = await import("./assets/datas/model-cache.js");
+    const { loadSharedModel } = await import("./assets/datas/model-cache.js?v=alpha-cutout-2");
     const modelAssets = [
       ["assets/models/furniture/shelf.mtl", "assets/models/furniture/shelf.obj"],
       ["assets/models/furniture/table.mtl", "assets/models/furniture/table.obj"],
@@ -454,7 +454,7 @@ async function scheduleThreeSceneInitialization() {
     startupLoader.querySelector("strong").textContent = "Construction de la scène 3D";
     startupLoaderBar.style.width = "78%";
     startupLoaderProgress.textContent = "Chargement 78 %";
-    const { createRoomScene } = await import("./assets/datas/room.js?v=desktop-notepad-1");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=alpha-cutout-2");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);

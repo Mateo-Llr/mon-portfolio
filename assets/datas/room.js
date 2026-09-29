@@ -3,7 +3,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { loadSharedModel, onIdle, onVisible, loadSharedTexture, loadSharedPixelData, clearSharedCache } from "./model-cache.js";
+import { loadSharedModel, onIdle, onVisible, loadSharedTexture, loadSharedPixelData, clearSharedCache } from "./model-cache.js?v=alpha-cutout-2";
 import { drawProjectScreen } from "./screen-renderer.js";
 
 function material(color, roughness = 0.72, metalness = 0) {
@@ -590,7 +590,7 @@ export function createRoomScene(container, projects = []) {
   function attachJavaCUPTrophy(shelfGroup) {
     attachTrophy(shelfGroup, {
       id: "java-cup-trophy",
-      label: "Java CUP",
+      label: "Java",
       modelPath: "assets/models/java_cup.mtl",
       objPath: "assets/models/java_cup.obj",
       scale: 0.62,
@@ -2069,7 +2069,7 @@ export function createRoomScene(container, projects = []) {
       { id: "linux-penguin", label: "Pingouin Linux", object: scene.getObjectByName("linux-penguin") },
       { id: "php-elephant", label: "Éléphant PHP", object: scene.getObjectByName("php-elephant") },
       { id: "sql-trophy", label: "SQL", object: scene.getObjectByName("sql-trophy") },
-      { id: "java-cup-trophy", label: "Java CUP", object: scene.getObjectByName("java-cup-trophy") },
+      { id: "java-cup-trophy", label: "Java", object: scene.getObjectByName("java-cup-trophy") },
       { id: "salon-return-plant", label: "Plante retour salon", object: scene.getObjectByName("salon-return-plant") },
       ...roomCassettes.map((object, index) => ({ id: `cassette-${index + 1}`, label: `Cassette ${index + 1}`, object }))
     ];

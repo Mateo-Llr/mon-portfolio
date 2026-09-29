@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { loadSharedModel, onIdle, onVisible, onVisibilityChange, loadSharedTexture, loadSharedPixelData } from "./model-cache.js";
+import { loadSharedModel, onIdle, onVisible, onVisibilityChange, loadSharedTexture, loadSharedPixelData } from "./model-cache.js?v=alpha-cutout-2";
 import { drawProjectScreen } from "./screen-renderer.js";
 
 const SCREEN_WIDTH = 960;

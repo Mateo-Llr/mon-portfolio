@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { loadSharedModel, onIdle, onVisible, onVisibilityChange } from "./model-cache.js";
+import { loadSharedModel, onIdle, onVisible, onVisibilityChange } from "./model-cache.js?v=alpha-cutout-2";
 
 export function createCassetteModels(stage, projects) {
   const count = projects.length;

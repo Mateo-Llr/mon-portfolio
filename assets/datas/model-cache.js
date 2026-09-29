@@ -55,6 +55,11 @@ export function loadSharedModel(mtlPath, objPath) {
             mtlPath,
             (materials) => {
               materials.preload();
+              Object.values(materials.materials).forEach((material) => {
+                if (!material.map) return;
+                material.alphaTest = Math.max(material.alphaTest, 0.5);
+                material.needsUpdate = true;
+              });
               const objectLoader = new OBJLoader();
               objectLoader.setMaterials(materials);
               objectLoader.load(objPath, loadResolve, undefined, loadReject);
