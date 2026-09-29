@@ -69,6 +69,21 @@ const trophies = {
     title: "LINUX",
     meta: "SYSTÈME&nbsp;&nbsp; / &nbsp;&nbsp;ENVIRONNEMENT DE DÉVELOPPEMENT",
     description: "Un environnement que j'explore pour mieux comprendre les outils, les commandes et les pratiques du développement."
+  },
+  "php-elephant": {
+    title: "PHP",
+    meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;DÉVELOPPEMENT WEB CÔTÉ SERVEUR",
+    description: "Je découvre PHP pour apprendre à générer des pages web côté serveur et à relier des données aux interfaces que je crée."
+  },
+  "sql-trophy": {
+    title: "SQL",
+    meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;BASES DE DONNÉES",
+    description: "SQL permet de consulter, organiser et modifier les données d'une base relationnelle."
+  },
+  "java-cup-trophy": {
+    title: "JAVA CUP",
+    meta: "OUTIL&nbsp;&nbsp; / &nbsp;&nbsp;GÉNÉRATEUR D'ANALYSEUR SYNTAXIQUE",
+    description: "Java CUP génère un analyseur syntaxique Java à partir d'une grammaire."
   }
 };
 
@@ -382,7 +397,10 @@ async function scheduleThreeSceneInitialization() {
       ["assets/models/godot.mtl", "assets/models/godot.obj"],
       ["assets/models/trophies/trophy_css.mtl", "assets/models/trophies/trophy_css.obj"],
       ["assets/models/trophies/trophy_javascript.mtl", "assets/models/trophies/trophy_javascript.obj"],
-      ["assets/models/linux_penguin.mtl", "assets/models/linux_penguin.obj"]
+      ["assets/models/linux_penguin.mtl", "assets/models/linux_penguin.obj"],
+      ["assets/models/php_elephant.mtl", "assets/models/php_elephant.obj"],
+      ["assets/models/sql.mtl", "assets/models/sql.obj"],
+      ["assets/models/java_cup.mtl", "assets/models/java_cup.obj"]
     ];
     let loadedModels = 0;
     startupLoader.querySelector("strong").textContent = "Chargement des objets";

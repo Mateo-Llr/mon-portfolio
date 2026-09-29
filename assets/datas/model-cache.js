@@ -5,6 +5,15 @@ import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 const cache = new Map();
 const textureCache = new Map();
 const pixelDataCache = new Map();
+const assetCacheBust = new URL(window.location.href).searchParams.get("asset-cache-bust");
+if (assetCacheBust) {
+  THREE.DefaultLoadingManager.setURLModifier((url) => {
+    const resourceUrl = new URL(url, document.baseURI);
+    if (resourceUrl.origin !== window.location.origin) return url;
+    resourceUrl.searchParams.set("asset-cache-bust", assetCacheBust);
+    return resourceUrl.href;
+  });
+}
 const modelQueue = [];
 let activeModelLoads = 0;
 const modelLoadListeners = new Set();

@@ -436,12 +436,13 @@ export function createRoomScene(container, projects = []) {
     }
   }
 
-  function attachTrophy(shelfGroup, { id, label, modelPath, objPath, scale = 0.62, position = [0.18, 1.62, -0.08], rotationY = -0.9 }) {
+  function attachTrophy(shelfGroup, { id, label, modelPath, objPath, scale = 0.62, position = [0.18, 1.62, -0.08], rotationY = -0.9, showcaseRotationYDegrees = null }) {
     if (!shelfGroup) return;
     loadSharedModel(modelPath, objPath).then((template) => {
       const rawTrophy = template.clone();
       const trophy = centerModelPivot(rawTrophy);
       trophy.name = id;
+      trophy.userData.showcaseRotationYDegrees = showcaseRotationYDegrees;
       trophy.scale.setScalar(scale);
       trophy.rotation.y = rotationY;
       trophy.position.set(...position);
@@ -561,6 +562,43 @@ export function createRoomScene(container, projects = []) {
     });
   }
 
+  function attachPHPElephant(shelfGroup) {
+    attachTrophy(shelfGroup, {
+      id: "php-elephant",
+      label: "PHP Elephant",
+      modelPath: "assets/models/php_elephant.mtl",
+      objPath: "assets/models/php_elephant.obj",
+      scale: 0.62,
+      position: [1.1, 1.62, -0.08],
+      rotationY: 0.2,
+      showcaseRotationYDegrees: -120
+    });
+  }
+
+  function attachSQLTrophy(shelfGroup) {
+    attachTrophy(shelfGroup, {
+      id: "sql-trophy",
+      label: "SQL",
+      modelPath: "assets/models/sql.mtl",
+      objPath: "assets/models/sql.obj",
+      scale: 0.62,
+      position: [0, 4.4, -0.5],
+      rotationY: 0
+    });
+  }
+
+  function attachJavaCUPTrophy(shelfGroup) {
+    attachTrophy(shelfGroup, {
+      id: "java-cup-trophy",
+      label: "Java CUP",
+      modelPath: "assets/models/java_cup.mtl",
+      objPath: "assets/models/java_cup.obj",
+      scale: 0.62,
+      position: [0, 4.4, 0.5],
+      rotationY: 0
+    });
+  }
+
   function prepareRoomModel(model) {
     const cullingStates = [];
     model.traverse((part) => {
@@ -661,7 +699,8 @@ export function createRoomScene(container, projects = []) {
     addSofaL(scene, upholstery, darkWood);
     addCoffeeTable(scene, tabletop, darkWood);
     addShelf(scene, [[0xc05262, 0, 0.25], [0x9b4e39, 1, 0], [0xd29b48, 2, 0.1], [0x6f8f6d, 3, 0]], 9.8, 2.6, 5.2);
-    addShelf(scene, [], 9.8, 2.6, 2.2, false, "shelf-secondary");
+    addShelf(scene, [], 10.8, -0.15, -4, false, "shelf-secondary");
+    addShelf(scene, [], 10.8, -0.15, -1.8, false, "shelf-tertiary");
     const shelf = scene.getObjectByName("shelf");
     attachScratchTrophy(shelf);
     attachPythonTrophy(shelf);
@@ -671,6 +710,10 @@ export function createRoomScene(container, projects = []) {
     attachCSSTrophy(shelf);
     attachJavaScriptTrophy(shelf);
     attachLinuxPenguin(shelf);
+    attachPHPElephant(shelf);
+    const skillsShelf = scene.getObjectByName("shelf-tertiary");
+    attachSQLTrophy(skillsShelf);
+    attachJavaCUPTrophy(skillsShelf);
     const tvStand = furnitureGroup(scene, "tv-stand", "Meuble TV");
     tvStand.add(box(5.8, 0.32, 0.9, darkWood, [6.0, 0.62, -5.15]));
     tvStand.add(box(5.6, 0.12, 0.95, tabletop, [6.0, 0.82, -5.15]));
@@ -814,6 +857,13 @@ export function createRoomScene(container, projects = []) {
   const SHOWCASE_FRONT_SCALE = 1.15;
   const SHOWCASE_TRANSITION_DURATION = 500;
 
+  function getShowcaseBaseRotationY(trophy) {
+    const rotationYDegrees = trophy.userData.showcaseRotationYDegrees;
+    return Number.isFinite(rotationYDegrees)
+      ? THREE.MathUtils.degToRad(rotationYDegrees)
+      : SHOWCASE_BASE_ROTATION_Y;
+  }
+
   // Fresnel/rim shader kept unused here on purpose removed: the hover
   // effect is now handled by the OutlinePass in the post-processing
   // pipeline above, which draws a single clean line around a trophy's
@@ -830,6 +880,7 @@ export function createRoomScene(container, projects = []) {
     const trophy = shelfTrophies.find((entry) => entry.name === name);
     if (!trophy || showcasedTrophyName === name) return;
     if (showcasedTrophyName) closeTrophyShowcase();
+    const showcaseBaseRotationY = getShowcaseBaseRotationY(trophy);
     showcaseOriginalState = {
       parent: trophy.parent,
       position: trophy.position.clone(),
@@ -849,8 +900,8 @@ export function createRoomScene(container, projects = []) {
       fromQuaternion,
       fromScale,
       toPosition: new THREE.Vector3(0, -0.24, 0),
-      toRotation: new THREE.Euler(0, SHOWCASE_BASE_ROTATION_Y, 0),
-      toQuaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, SHOWCASE_BASE_ROTATION_Y, 0)),
+      toRotation: new THREE.Euler(0, showcaseBaseRotationY, 0),
+      toQuaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, showcaseBaseRotationY, 0)),
       toScale: (() => {
         const isMobile = window.matchMedia?.("(max-width: 760px)")?.matches;
         const isCompactMobile = window.matchMedia?.("(max-width: 380px)")?.matches;
@@ -925,10 +976,11 @@ export function createRoomScene(container, projects = []) {
     if (!showcasedTrophyName || showcaseTransition) return;
     const trophy = shelfTrophies.find((entry) => entry.name === showcasedTrophyName);
     if (!trophy) return;
+    const showcaseBaseRotationY = getShowcaseBaseRotationY(trophy);
 
     if (showcaseDragState) {
       trophy.rotation.x = showcaseTilt.x;
-      trophy.rotation.y = SHOWCASE_BASE_ROTATION_Y + showcaseTilt.y;
+      trophy.rotation.y = showcaseBaseRotationY + showcaseTilt.y;
       trophy.rotation.z = 0;
       return;
     }
@@ -939,7 +991,7 @@ export function createRoomScene(container, projects = []) {
     showcaseTilt.x += (idleX - showcaseTilt.x) * 0.04;
     showcaseTilt.y += (idleY - showcaseTilt.y) * 0.04;
     trophy.rotation.x = showcaseTilt.x;
-    trophy.rotation.y = SHOWCASE_BASE_ROTATION_Y + showcaseTilt.y;
+    trophy.rotation.y = showcaseBaseRotationY + showcaseTilt.y;
     trophy.rotation.z = 0;
   }
 
@@ -1076,14 +1128,14 @@ export function createRoomScene(container, projects = []) {
     let jsonConfiguration = null;
     let jsonCameraConfiguration = null;
     try {
-      const response = await fetch("assets/datas/positions.json");
+      const response = await fetch("assets/datas/positions.json", { cache: "no-store" });
       if (response.ok) jsonConfiguration = await response.json();
     } catch { jsonConfiguration = null; }
+    configuredPositions = jsonConfiguration || storedPositions || {};
     try {
       const response = await fetch(CAMERA_FILE_PATH);
       if (response.ok) jsonCameraConfiguration = await response.json();
     } catch { jsonCameraConfiguration = null; }
-    configuredPositions = jsonConfiguration || storedPositions || {};
     configuredCameraPositions = Array.isArray(jsonCameraConfiguration?.cameraPositions)
       ? jsonCameraConfiguration.cameraPositions
       : Array.isArray(jsonConfiguration?.cameraPositions)
@@ -2015,6 +2067,9 @@ export function createRoomScene(container, projects = []) {
       { id: "css-trophy", label: "Trophée CSS", object: scene.getObjectByName("css-trophy") },
       { id: "javascript-trophy", label: "Trophée JavaScript", object: scene.getObjectByName("javascript-trophy") },
       { id: "linux-penguin", label: "Pingouin Linux", object: scene.getObjectByName("linux-penguin") },
+      { id: "php-elephant", label: "Éléphant PHP", object: scene.getObjectByName("php-elephant") },
+      { id: "sql-trophy", label: "SQL", object: scene.getObjectByName("sql-trophy") },
+      { id: "java-cup-trophy", label: "Java CUP", object: scene.getObjectByName("java-cup-trophy") },
       { id: "salon-return-plant", label: "Plante retour salon", object: scene.getObjectByName("salon-return-plant") },
       ...roomCassettes.map((object, index) => ({ id: `cassette-${index + 1}`, label: `Cassette ${index + 1}`, object }))
     ];
@@ -2026,6 +2081,7 @@ export function createRoomScene(container, projects = []) {
       ["tv-stand", "Meuble TV"],
       ["shelf", "Étagère"],
       ["shelf-secondary", "Deuxième étagère"],
+      ["shelf-tertiary", "Troisième étagère"],
       ["plant", "Plante"]
     ].map(([id, label]) => ({ id, label, object: scene.getObjectByName(id) }));
     return [...props, ...furniture].filter((entry) => entry.object);
@@ -2122,10 +2178,21 @@ export function createRoomScene(container, projects = []) {
       }
     });
     panel.querySelector("#roomEditorSave").addEventListener("click", validateEditorPositions);
-    panel.querySelector("#roomEditorClearCache").addEventListener("click", () => {
+    panel.querySelector("#roomEditorClearCache").addEventListener("click", async () => {
       clearSharedCache();
       const status = panel.querySelector("#roomEditorStatus");
-      status.textContent = "Cache vidé — les ressources seront rechargées.";
+      status.textContent = "Vidage du cache et rechargement des ressources…";
+      try {
+        if ("caches" in window) {
+          const cacheNames = await window.caches.keys();
+          await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)));
+        }
+      } catch (error) {
+        console.warn("Impossible de vider Cache Storage :", error);
+      }
+      const reloadUrl = new URL(window.location.href);
+      reloadUrl.searchParams.set("asset-cache-bust", Date.now().toString());
+      window.location.replace(reloadUrl.toString());
     });
     panel.querySelector("#roomEditorClose").addEventListener("click", () => setEditorMode(false));
     window.addEventListener("keydown", (event) => {
