@@ -354,13 +354,22 @@
     "rotationY": 57,
     "scale": 0.62
   },
+  "github-octocat": {
+    "position": {
+      "x": -0.147,
+      "y": 3.2,
+      "z": 0.5
+    },
+    "rotationY": 65,
+    "scale": 0.6
+  },
   "java-cup-trophy": {
     "position": {
-      "x": -0.108,
+      "x": -0.016,
       "y": 3.15,
-      "z": 0.584
+      "z": -0.313
     },
-    "rotationY": 44,
+    "rotationY": 64,
     "scale": 0.62
   },
   "laptop": {

@@ -102,6 +102,11 @@ const trophies = {
     meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;BASES DE DONNÉES",
     description: "SQL permet de consulter, organiser et modifier les données d'une base relationnelle."
   },
+  "github-octocat": {
+    title: "GITHUB OCTOCAT",
+    meta: "MASCOTTE&nbsp;&nbsp; / &nbsp;&nbsp;GITHUB",
+    description: "L'Octocat est la mascotte de GitHub : un chat reconnaissable auquel des tentacules donnent sa silhouette de pieuvre. Il représente la plateforme où les développeurs hébergent leurs projets, collaborent et partagent leur code."
+  },
   "java-cup-trophy": {
     title: "JAVA",
     meta: "LANGAGE&nbsp;&nbsp; / &nbsp;&nbsp;PROGRAMMATION ORIENTÉE OBJET",
@@ -419,6 +424,7 @@ async function scheduleThreeSceneInitialization() {
       ["assets/models/godot.mtl", "assets/models/godot.obj"],
       ["assets/models/trophies/trophy_css.mtl", "assets/models/trophies/trophy_css.obj"],
       ["assets/models/trophies/trophy_javascript.mtl", "assets/models/trophies/trophy_javascript.obj"],
+      ["assets/models/octocat/github_octocat.mtl", "assets/models/octocat/github_octocat.obj"],
       ["assets/models/linux_penguin.mtl", "assets/models/linux_penguin.obj"],
       ["assets/models/php_elephant.mtl", "assets/models/php_elephant.obj"],
       ["assets/models/sql.mtl", "assets/models/sql.obj"],
@@ -435,7 +441,7 @@ async function scheduleThreeSceneInitialization() {
 
     startupLoader.querySelector("strong").textContent = "Initialisation WebGL et chargement des textures";
     startupLoaderProgress.textContent = "Chargement 60 %";
-    const { createRoomScene } = await import("./assets/datas/room.js?v=alpha-cutout-2");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=alpha-cutout-3");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);

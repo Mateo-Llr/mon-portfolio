@@ -587,6 +587,18 @@ export function createRoomScene(container, projects = []) {
     });
   }
 
+  function attachGitHubOctocat(shelfGroup) {
+    attachTrophy(shelfGroup, {
+      id: "github-octocat",
+      label: "GitHub Octocat",
+      modelPath: "assets/models/octocat/github_octocat.mtl",
+      objPath: "assets/models/octocat/github_octocat.obj",
+      scale: 0.62,
+      position: [0.85, 4.43, 0.417],
+      rotationY: 0
+    });
+  }
+
   function attachJavaCUPTrophy(shelfGroup) {
     attachTrophy(shelfGroup, {
       id: "java-cup-trophy",
@@ -713,6 +725,7 @@ export function createRoomScene(container, projects = []) {
     attachPHPElephant(shelf);
     const skillsShelf = scene.getObjectByName("shelf-tertiary");
     attachSQLTrophy(skillsShelf);
+    attachGitHubOctocat(skillsShelf);
     attachJavaCUPTrophy(skillsShelf);
     const tvStand = furnitureGroup(scene, "tv-stand", "Meuble TV");
     tvStand.add(box(5.8, 0.32, 0.9, darkWood, [6.0, 0.62, -5.15]));
@@ -2069,6 +2082,7 @@ export function createRoomScene(container, projects = []) {
       { id: "linux-penguin", label: "Pingouin Linux", object: scene.getObjectByName("linux-penguin") },
       { id: "php-elephant", label: "Éléphant PHP", object: scene.getObjectByName("php-elephant") },
       { id: "sql-trophy", label: "SQL", object: scene.getObjectByName("sql-trophy") },
+      { id: "github-octocat", label: "Mascotte GitHub", object: scene.getObjectByName("github-octocat") },
       { id: "java-cup-trophy", label: "Java", object: scene.getObjectByName("java-cup-trophy") },
       { id: "salon-return-plant", label: "Plante retour salon", object: scene.getObjectByName("salon-return-plant") },
       ...roomCassettes.map((object, index) => ({ id: `cassette-${index + 1}`, label: `Cassette ${index + 1}`, object }))
