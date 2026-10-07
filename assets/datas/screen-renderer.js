@@ -1,6 +1,18 @@
 const SCREEN_WIDTH = 960;
 const SCREEN_HEIGHT = 540;
 
+const DEFAULT_THEME = {
+  background: "#0f1c1a",
+  grid: "rgba(93, 169, 163, .12)",
+  primary: "#b9e8dc",
+  secondary: "#91aaa4",
+  accent: "#4fc1bb",
+  body: "#eee9d8",
+  sectionBody: "#aabbb3",
+  scanline: "#b8c39d",
+  vignette: "rgba(0, 0, 0, .55)"
+};
+
 function cleanText(value = "") {
   return value.replace(/<[^>]+>/g, "").replaceAll("&nbsp;", " ").trim();
 }
@@ -34,12 +46,13 @@ function drawBadge(context, text, x, y, color = "#4fc1bb") {
 
 export function drawProjectScreen(canvas, project, index, isEjected = false, requestedScale = 1) {
   const context = canvas.getContext("2d");
+  const theme = isEjected ? DEFAULT_THEME : { ...DEFAULT_THEME, ...project?.screenTheme };
   context.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   context.save();
-  context.fillStyle = "#0f1c1a";
+  context.fillStyle = theme.background;
   context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-  context.strokeStyle = "rgba(93, 169, 163, .12)";
+  context.strokeStyle = theme.grid;
   context.lineWidth = 1;
   for (let x = 0; x <= SCREEN_WIDTH; x += 52) {
     context.beginPath();
@@ -60,21 +73,21 @@ export function drawProjectScreen(canvas, project, index, isEjected = false, req
   context.scale(layoutScale, layoutScale);
 
   if (isEjected) {
-    context.fillStyle = "#b9e8dc";
+    context.fillStyle = theme.primary;
     context.font = "400 58px 'Bebas Neue', sans-serif";
     context.fillText("SIGNAL", 82, 160);
     context.fillText("PAUSE", 82, 216);
-    context.fillStyle = "#90aaa4";
+    context.fillStyle = theme.secondary;
     context.font = "400 18px 'Space Grotesk', sans-serif";
     context.fillText("Insérez une cassette pour découvrir un projet.", 82, 284);
   } else {
-    context.fillStyle = "#91aaa4";
+    context.fillStyle = theme.secondary;
     context.font = "500 13px 'DM Mono', monospace";
     context.fillText(project.date || `ARCHIVE / 0${index + 1}`, 82, 52);
     context.fillText("FERMER  X", 782, 52);
 
-    context.fillStyle = "#b9e8dc";
-    context.shadowColor = "rgba(185, 232, 220, .25)";
+    context.fillStyle = theme.primary;
+    context.shadowColor = theme.titleGlow || "rgba(185, 232, 220, .25)";
     context.shadowBlur = 8;
     const titleImage = project.gameTitleTexture;
     if (titleImage?.naturalWidth) {
@@ -83,12 +96,23 @@ export function drawProjectScreen(canvas, project, index, isEjected = false, req
       const imageScale = Math.min(maxWidth / titleImage.naturalWidth, maxHeight / titleImage.naturalHeight);
       const imageWidth = titleImage.naturalWidth * imageScale;
       const imageHeight = titleImage.naturalHeight * imageScale;
+      if (theme.logoPlate) {
+        context.shadowBlur = 0;
+        context.fillStyle = theme.logoPlate;
+        context.fillRect(66, 70, 500, 164);
+        if (theme.logoPlateBorder) {
+          context.strokeStyle = theme.logoPlateBorder;
+          context.lineWidth = 2;
+          context.strokeRect(66, 70, 500, 164);
+        }
+      }
       context.save();
       context.shadowBlur = 0;
       context.imageSmoothingEnabled = false;
       context.drawImage(titleImage, 82, 88 + (maxHeight - imageHeight) / 2, imageWidth, imageHeight);
       context.restore();
     } else {
+      context.fillStyle = theme.primary;
       context.font = "400 68px 'Bebas Neue', sans-serif";
       const title = project.title.replace("<br>", "\n").split("\n");
       title.forEach((line, lineIndex) => context.fillText(line, 82, 150 + lineIndex * 62));
@@ -100,15 +124,15 @@ export function drawProjectScreen(canvas, project, index, isEjected = false, req
     const tags = [...(project.projectMeta || "").matchAll(/sheet-tags">(.*?)<\/div>/g)].flatMap((match) => [...match[1].matchAll(/<span>(.*?)<\/span>/g)].map((tag) => cleanText(tag[1])));
     let badgeX = 580;
     tools.forEach((tool) => {
-      badgeX = drawBadge(context, tool, badgeX, 126, "#b9e8dc");
+      badgeX = drawBadge(context, tool, badgeX, 126, theme.secondary);
     });
     badgeX = 580;
     tags.slice(0, 4).forEach((tag) => {
-      badgeX = drawBadge(context, tag, badgeX, 164, "#4fc1bb");
+      badgeX = drawBadge(context, tag, badgeX, 164, theme.accent);
       if (badgeX > 900) badgeX = 570;
     });
 
-    context.fillStyle = "#eee9d8";
+    context.fillStyle = theme.body;
     context.font = "500 24px 'Space Grotesk', sans-serif";
     wrapText(context, project.lead || project.description, 820).slice(0, 2).forEach((line, lineIndex) => {
       context.fillText(line, 82, 274 + lineIndex * 28);
@@ -117,10 +141,10 @@ export function drawProjectScreen(canvas, project, index, isEjected = false, req
     const sections = [...(project.content || "").matchAll(/<h3>(.*?)<\/h3>\s*<p>(.*?)<\/p>/g)].slice(0, 2);
     let sectionX = 82;
     sections.forEach(([fullMatch, heading, body]) => {
-      context.fillStyle = "#4fc1bb";
+      context.fillStyle = theme.accent;
       context.font = "500 12px 'DM Mono', monospace";
       context.fillText(cleanText(heading), sectionX, 348);
-      context.fillStyle = "#aabbb3";
+      context.fillStyle = theme.sectionBody;
       context.font = "400 15px 'Space Grotesk', sans-serif";
       wrapText(context, cleanText(body), 380).slice(0, 4).forEach((line, lineIndex) => {
         context.fillText(line, sectionX, 374 + lineIndex * 18);
@@ -132,14 +156,14 @@ export function drawProjectScreen(canvas, project, index, isEjected = false, req
   context.restore();
   context.globalCompositeOperation = "screen";
   context.globalAlpha = 0.14;
-  context.fillStyle = "#b8c39d";
+  context.fillStyle = theme.scanline;
   const scanOffset = Math.floor(Date.now() / 90) % 6;
   for (let y = scanOffset; y < SCREEN_HEIGHT; y += 6) context.fillRect(0, y, SCREEN_WIDTH, 2);
   context.globalCompositeOperation = "source-over";
   context.globalAlpha = 1;
   const vignette = context.createRadialGradient(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SCREEN_WIDTH * 0.18, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SCREEN_WIDTH * 0.72);
   vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
-  vignette.addColorStop(1, "rgba(0, 0, 0, .55)");
+  vignette.addColorStop(1, theme.vignette);
   context.fillStyle = vignette;
   context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   context.restore();

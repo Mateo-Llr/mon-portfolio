@@ -50,6 +50,56 @@ projects[3].galleryImages = [
   { src: "assets/projects/scribbled/scribbled_3.png", alt: "Le personnage rencontre un ennemi dans le niveau" },
   { src: "assets/projects/scribbled/scribbled_4.png", alt: "Édition d'une pièce du personnage dessiné" }
 ];
+projects[0].screenTheme = {
+  background: "#21172d",
+  grid: "rgba(190, 151, 226, .16)",
+  primary: "#e4d3f4",
+  secondary: "#c7a8e6",
+  accent: "#a77bd3",
+  body: "#f0e9f5",
+  sectionBody: "#c9bdd4",
+  scanline: "#c6a5e6",
+  vignette: "rgba(12, 5, 20, .48)",
+  logoPlate: "#e9ddf2",
+  logoPlateBorder: "#b89bd2",
+  titleGlow: "rgba(214, 183, 242, .32)"
+};
+projects[1].screenTheme = {
+  background: "#111923",
+  grid: "rgba(151, 188, 123, .16)",
+  primary: "#eee0bc",
+  secondary: "#c5cf8d",
+  accent: "#97b87c",
+  body: "#e7e3cf",
+  sectionBody: "#bec5ae",
+  scanline: "#c8b783",
+  vignette: "rgba(5, 10, 16, .52)",
+  logoPlate: "#e5d7ad",
+  logoPlateBorder: "#9a7650",
+  titleGlow: "rgba(214, 191, 135, .3)"
+};
+projects[2].screenTheme = {
+  background: "#281710",
+  grid: "rgba(255, 164, 92, .15)",
+  primary: "#ffd18a",
+  secondary: "#ffad68",
+  accent: "#f0784b",
+  body: "#f3dfc2",
+  sectionBody: "#d6b89a",
+  scanline: "#ffa65e",
+  vignette: "rgba(22, 8, 4, .52)"
+};
+projects[3].screenTheme = {
+  background: "#f2eddd",
+  grid: "rgba(60, 54, 77, .12)",
+  primary: "#302b3d",
+  secondary: "#554c65",
+  accent: "#a65b54",
+  body: "#383344",
+  sectionBody: "#5e5869",
+  scanline: "#756c7e",
+  vignette: "rgba(35, 29, 46, .2)"
+};
 
 const trophies = {
   "scratch-trophy": {
@@ -441,7 +491,7 @@ async function scheduleThreeSceneInitialization() {
 
     startupLoader.querySelector("strong").textContent = "Initialisation WebGL et chargement des textures";
     startupLoaderProgress.textContent = "Chargement 60 %";
-    const { createRoomScene } = await import("./assets/datas/room.js?v=alpha-cutout-3");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=alpha-cutout-4");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);
