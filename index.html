@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=desktop-notepad-5" />
+    <link rel="stylesheet" href="styles.css?v=desktop-notepad-7" />
     <script>
       const resizeDesignCanvas = () => {
         const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
@@ -53,7 +53,6 @@
     <section class="desktop-screen" id="desktopScreen" aria-hidden="true" inert aria-label="Bureau Windows du portfolio">
       <div class="desktop-topbar">
         <span class="desktop-brand"><span class="desktop-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span> MATEO / PORTFOLIO</span>
-        <button class="desktop-exit" type="button" data-close-desktop>RETOUR À LA PIÈCE <span aria-hidden="true">↗</span></button>
       </div>
       <div class="desktop-shortcuts" role="list" aria-label="Applications du bureau">
         <div class="desktop-shortcut" role="listitem"><img class="desktop-app-icon" src="assets/textures/desktop/icon_chrome.png" alt=""><span>Google Chrome</span></div>
@@ -77,6 +76,7 @@
       <div class="desktop-taskbar">
         <span class="desktop-taskbar-start" aria-hidden="true"><span class="desktop-mark"><i></i><i></i><i></i><i></i></span></span>
         <span class="desktop-taskbar-title">Bureau</span>
+        <button class="desktop-taskbar-return" type="button" data-close-desktop aria-label="Quitter le Bureau Windows et retourner à la pièce"><span aria-hidden="true">↩</span><span>Retour</span></button>
         <button class="notepad-taskbar-item" type="button" data-notepad-restore hidden><img src="assets/textures/desktop/icon_notes.png" alt=""><span>Création du portfolio</span></button>
         <span class="desktop-clock" id="desktopClock"></span>
       </div>
@@ -122,6 +122,6 @@
         </div>
       </div>
     </aside>
-    <script type="module" src="script.js?v=desktop-notepad-10"></script>
+    <script type="module" src="script.js?v=desktop-notepad-11"></script>
   </body>
 </html>

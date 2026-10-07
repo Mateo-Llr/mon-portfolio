@@ -48,8 +48,6 @@ button { cursor: pointer; }
 .desktop-brand { display: flex; align-items: center; gap: 12px; font: 500 11px var(--mono); letter-spacing: .08em; text-shadow: 0 1px 8px rgba(0, 26, 60, .5); }
 .desktop-mark { display: grid; grid-template-columns: repeat(2, 7px); gap: 2px; width: 16px; height: 16px; }
 .desktop-mark i { display: block; background: #f6f7f8; }
-.desktop-exit { border: 1px solid rgba(255,255,255,.48); padding: 10px 13px; color: #fff; background: rgba(9, 39, 82, .24); font: 500 9px var(--mono); letter-spacing: .06em; }
-.desktop-exit span { margin-left: 10px; }
 .desktop-shortcuts { position: absolute; z-index: 1; top: 100px; left: 28px; display: grid; gap: 12px; }
 .desktop-shortcut { display: grid; justify-items: center; gap: 7px; width: 112px; min-height: 96px; padding: 9px 4px; border: 1px solid transparent; color: #fff; background: transparent; font: 500 9px var(--mono); text-align: center; text-shadow: 0 1px 5px rgba(0, 20, 50, .85); }
 .desktop-shortcut[data-launch-notepad] { cursor: pointer; }
@@ -78,9 +76,13 @@ button { cursor: pointer; }
 .desktop-taskbar-start { display: grid; place-items: center; width: 40px; height: 40px; }
 .desktop-taskbar-start .desktop-mark { grid-template-columns: repeat(2, 8px); width: 18px; height: 18px; }
 .desktop-taskbar-title { padding-left: 13px; border-left: 1px solid rgba(255,255,255,.32); font: 400 11px var(--display); }
+.desktop-taskbar-return { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; margin-left: 8px; padding: 0 14px; border: 1px solid rgba(255,255,255,.38); border-bottom: 3px solid rgba(255,255,255,.52); border-radius: 4px; color: #fff; background: rgba(255,255,255,.1); font: 500 10px var(--display); letter-spacing: .02em; transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.desktop-taskbar-return span:first-child { font-size: 17px; line-height: 1; }
+.desktop-taskbar-return:hover, .desktop-taskbar-return:focus-visible { transform: translateY(-2px); border-color: rgba(255,255,255,.9); border-bottom-color: #fff; outline: none; background: rgba(72, 151, 255, .72); box-shadow: 0 0 0 3px rgba(190, 224, 255, .28), 0 5px 18px rgba(3, 20, 46, .4); }
+.desktop-taskbar-return:active { transform: translateY(0); background: rgba(44, 116, 219, .88); }
 .desktop-clock { position: absolute; right: 24px; font: 400 12px var(--mono); }
 body.is-desktop-mode .studio { opacity: 0; pointer-events: none; transition: opacity .35s ease; }
-@media (max-width: 600px) { .desktop-topbar { inset: 16px 16px auto; }.desktop-brand { font-size: 9px; }.desktop-exit { padding: 9px; font-size: 8px; }.desktop-shortcuts { top: 90px; left: 12px; gap: 4px; }.desktop-shortcut { width: 96px; font-size: 8px; }.notepad-window { width: calc(100vw - 20px); height: min(520px, calc(100dvh - 100px)); min-width: 0; }.notepad-window-controls button { width: 38px; }.notepad-editor { padding: 14px; font-size: 12px; }.notepad-taskbar-item { width: 40px; justify-content: center; padding: 0; }.notepad-taskbar-item span { display: none; }.desktop-clock { right: 15px; } }
+@media (max-width: 600px) { .desktop-topbar { inset: 16px 16px auto; }.desktop-brand { font-size: 9px; }.desktop-shortcuts { top: 90px; left: 12px; gap: 4px; }.desktop-shortcut { width: 96px; font-size: 8px; }.notepad-window { width: calc(100vw - 20px); height: min(520px, calc(100dvh - 100px)); min-width: 0; }.notepad-window-controls button { width: 38px; }.notepad-editor { padding: 14px; font-size: 12px; }.notepad-taskbar-item { width: 40px; justify-content: center; padding: 0; }.notepad-taskbar-item span { display: none; }.desktop-taskbar-return { gap: 5px; min-height: 38px; margin-left: 2px; padding: 0 9px; font-size: 9px; }.desktop-clock { right: 15px; } }
 @media (prefers-reduced-motion: reduce) { .desktop-screen, body.is-desktop-mode .studio { transition-duration: .01ms; } }
 .contact-scene-tab {
   position: fixed;
@@ -357,9 +359,9 @@ body.is-camera-mode .room-editor { pointer-events: none; opacity: .72; }
 .sheet-content .project-external-link:hover, .sheet-content .project-external-link:focus-visible { color: #202722; background: #f5bc43; outline: none; }
 .sheet-rule { width: 46px; height: 2px; margin: 38px 0 28px; background: #ef673d; }.sheet-content { max-width: 650px; color: #b9b9a7; font-size: 15px; line-height: 1.7; }.sheet-content p { margin: 0 0 22px; }.sheet-content h3 { margin: 37px 0 10px; color: #e7dfcc; font: 10px var(--mono); letter-spacing: .13em; }.sheet-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 36px; }.sheet-tags span { padding: 8px 10px; border: 1px solid rgba(245, 188, 67, .55); color: #f5bc43; font: 9px var(--mono); letter-spacing: .1em; }
 body.is-sheet-open { overflow: hidden; }
-.trophy-panel { position: fixed; z-index: 35; top: 0; left: 52%; right: auto; bottom: 0; width: min(560px, 40vw); display: flex; align-items: center; justify-content: center; padding: 6vh 2vw 6vh 1vw; pointer-events: none; transform: translateX(0); opacity: 0; transition: transform .4s cubic-bezier(.2,.8,.2,1), opacity .3s ease; }
+.trophy-panel { position: fixed; z-index: 35; top: 0; left: 52%; right: auto; bottom: 0; width: min(520px, 38vw); display: flex; align-items: center; justify-content: center; padding: 4vh 1.25vw 4vh .5vw; pointer-events: none; transform: translateX(0); opacity: 0; transition: transform .4s cubic-bezier(.2,.8,.2,1), opacity .3s ease; }
 .trophy-panel.is-visible { pointer-events: auto; transform: translateX(0); opacity: 1; }
-.trophy-panel-inner { position: relative; width: 100%; padding: 34px 34px 38px; color: #e7dfcc; background: linear-gradient(135deg, rgba(32, 39, 34, .96), rgba(24, 34, 29, .9)); border: 1px solid rgba(245, 188, 67, .58); box-shadow: 10px 12px 0 rgba(10, 14, 12, .28), inset 0 0 0 1px rgba(255, 255, 255, .05); }
+.trophy-panel-inner { position: relative; width: 100%; max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; padding: clamp(20px, 2.5vw, 30px); color: #e7dfcc; background: linear-gradient(135deg, rgba(32, 39, 34, .96), rgba(24, 34, 29, .9)); border: 1px solid rgba(245, 188, 67, .58); box-shadow: 10px 12px 0 rgba(10, 14, 12, .28), inset 0 0 0 1px rgba(255, 255, 255, .05); }
 .trophy-panel-inner::before { content: ""; position: absolute; inset: 10px; border: 1px solid rgba(239, 103, 61, .3); pointer-events: none; }
 .trophy-panel-header { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-bottom: 10px; border-bottom: 0; }
 .trophy-panel-close { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 6px; min-width: 132px; justify-content: center; padding: 12px 16px 11px; border: 1px solid #ffb09a; border-radius: 999px; color: #fff7ed; background: #d94b36; box-shadow: 0 7px 0 rgba(105, 25, 18, .32), 0 0 0 3px rgba(217, 75, 54, .16); font: 500 10px var(--mono); letter-spacing: .1em; cursor: pointer; }
@@ -372,7 +374,7 @@ body.is-sheet-open { overflow: hidden; }
   -webkit-background-clip: text;
   background-clip: text;
   font-family: "Bebas Neue", "Arial Narrow", sans-serif;
-  font-size: clamp(66px, 6vw, 104px);
+  font-size: clamp(58px, 6vw, 104px);
   line-height: .86;
   letter-spacing: .035em;
   font-weight: 400;
@@ -382,12 +384,12 @@ body.is-sheet-open { overflow: hidden; }
 }
 .trophy-panel-body { display: grid; gap: 24px; margin-top: 26px; }
 .trophy-panel-type { max-width: 180px; padding: 9px 0 0 18px; border-left: 1px solid rgba(245, 188, 67, .62); color: #d7d0bb; font: 9px/1.45 var(--mono); letter-spacing: .1em; text-align: right; }
-.trophy-panel-description { margin: 0; max-width: 19ch; font-size: clamp(20px, 2.1vw, 30px); line-height: 1.18; letter-spacing: -.03em; color: rgba(236, 228, 210, .96); }
+.trophy-panel-description { margin: 0; max-width: 19ch; font-size: clamp(18px, 1.9vw, 27px); line-height: 1.18; letter-spacing: -.03em; color: rgba(236, 228, 210, .96); }
 .trophy-panel-meta-stack { display: grid; gap: 12px; margin-top: 10px; }
 .trophy-panel-meta-line { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 14px; align-items: baseline; }
 .trophy-panel-label { color: rgba(169, 171, 159, .72); font: 9px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
 .trophy-panel-value { color: #ece4d2; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; }
-@media (max-width: 760px) { .trophy-panel { left: 0; right: 0; width: 100%; padding: 0 12px 12px; align-items: flex-end; } .trophy-panel-inner { padding: 16px 18px 20px; } .trophy-panel-title-wrap { align-items: flex-start; flex-direction: column; gap: 12px; margin-top: 14px; } .trophy-panel-type { max-width: none; padding: 0 0 0 10px; font-size: 8px; text-align: left; } .trophy-panel-body { gap: 14px; margin-top: 18px; } .trophy-panel-description { max-width: 24ch; font-size: clamp(16px, 5vw, 21px); } .trophy-panel-meta-stack { gap: 8px; margin-top: 4px; } .trophy-panel-meta-line { grid-template-columns: 1fr; gap: 3px; } .trophy-panel-label { font-size: 8px; } .trophy-panel-value { font-size: 12px; } .trophy-panel-close { min-width: 110px; padding: 9px 12px 8px; font-size: 8px; } }
+@media (max-width: 760px) { .trophy-panel { left: 0; right: 0; width: 100%; padding: 0 12px 12px; align-items: flex-end; } .trophy-panel-inner { max-height: 54dvh; padding: 16px 18px 20px; } .trophy-panel-title-wrap { align-items: flex-start; flex-direction: column; gap: 12px; margin-top: 14px; } .trophy-panel-type { max-width: none; padding: 0 0 0 10px; font-size: 8px; text-align: left; } .trophy-panel-body { gap: 14px; margin-top: 18px; } .trophy-panel-description { max-width: 24ch; font-size: clamp(16px, 5vw, 21px); } .trophy-panel-meta-stack { gap: 8px; margin-top: 4px; } .trophy-panel-meta-line { grid-template-columns: 1fr; gap: 3px; } .trophy-panel-label { font-size: 8px; } .trophy-panel-value { font-size: 12px; } .trophy-panel-close { min-width: 110px; padding: 9px 12px 8px; font-size: 8px; } }
 @media (max-width: 600px) { .project-sheet { padding: 0; }.sheet-panel { width: 100%; max-height: 100dvh; min-height: 100dvh; border-width: 0 0 1px; }.sheet-body { max-height: calc(100dvh - 54px); padding: 34px 22px 52px; }.sheet-toolbar { padding: 16px 18px; }.sheet-body h2 { font-size: clamp(48px, 18vw, 82px); }.sheet-content { font-size: 14px; } }
 @media (max-width: 380px) {
   .trophy-panel { padding: 0 8px 8px; }

@@ -738,23 +738,14 @@ export function createRoomScene(container, projects = []) {
     centerFurniturePivot(tvStand);
 
     const plant = furnitureGroup(scene, "plant", "Plante");
-    const plantPot = material(0xb36b4d, 0.8);
     const plantBase = new THREE.Vector3(-7.4, 0.06, -2.7);
     plant.position.copy(plantBase);
     const plantVisual = new THREE.Group();
     plant.add(plantVisual);
-    plantVisual.add(box(0.78, 0.72, 0.78, plantPot, [0, 0.36, 0]));
-    for (let index = 0; index < 5; index += 1) {
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.36, 8, 5), material(0x506c4d, 0.95));
-      leaf.scale.set(0.5, 1.7, 0.32);
-      leaf.position.set(Math.cos(index * 1.4) * 0.35, 1.09 + index * 0.12, Math.sin(index * 1.4) * 0.28);
-      leaf.rotation.z = (index - 2) * 0.28;
-      leaf.castShadow = true;
-      plantVisual.add(leaf);
-    }
     const plantLabel = createPropLabel("RETOUR", { fontSize: 210, fontWeight: 700, strokeWidth: 12, width: 0.74, height: 0.58, canvasWidth: 1024, canvasHeight: 512, backgroundColor: "transparent", textColor: "#ffffff", outlineColor: "#111713" });
     plantLabel.name = "plant-return-label";
-    plantLabel.position.set(0, 0.36, 0.401);
+    plantLabel.position.set(0, 0.24, 0.231);
+    plantLabel.scale.set(0.62, 0.48, 1);
     plantVisual.add(plantLabel);
     const salonReturnPlant = furnitureGroup(scene, "salon-return-plant", "Plante retour salon");
     salonReturnPlant.userData.editorId = "salon-return-plant";
@@ -762,21 +753,36 @@ export function createRoomScene(container, projects = []) {
     salonReturnPlant.position.set(9.8, 0.06, 3.7);
     const salonPlantVisual = new THREE.Group();
     salonReturnPlant.add(salonPlantVisual);
-    salonPlantVisual.add(box(0.78, 0.72, 0.78, plantPot, [0, 0.36, 0]));
-    for (let index = 0; index < 5; index += 1) {
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.36, 8, 5), material(0x506c4d, 0.95));
-      leaf.scale.set(0.5, 1.7, 0.32);
-      leaf.position.set(Math.cos(index * 1.4) * 0.35, 1.09 + index * 0.12, Math.sin(index * 1.4) * 0.28);
-      leaf.rotation.z = (index - 2) * 0.28;
-      leaf.castShadow = true;
-      salonPlantVisual.add(leaf);
-    }
     const salonReturnLabel = createPropLabel("RETOUR", { fontSize: 210, fontWeight: 700, strokeWidth: 12, width: 0.74, height: 0.58, canvasWidth: 1024, canvasHeight: 512, backgroundColor: "transparent", textColor: "#ffffff", outlineColor: "#111713" });
     salonReturnLabel.name = "salon-return-plant-label";
-    salonReturnLabel.position.set(0, 0.36, 0.401);
+    salonReturnLabel.position.set(0, 0.24, 0.231);
+    salonReturnLabel.scale.set(0.62, 0.48, 1);
     salonReturnLabel.userData.interactionType = "return";
     salonReturnLabel.userData.returnTargetCameraIndex = 3;
     salonPlantVisual.add(salonReturnLabel);
+    loadSharedModel("assets/models/plant_pot/plant_pot.mtl", "assets/models/plant_pot/plant_pot.obj").then((template) => {
+      [plantVisual, salonPlantVisual].forEach((visual, index) => {
+        const model = template.clone();
+        model.name = index === 0 ? "plant-model" : "salon-return-plant-model";
+        fitModelToHeight(model, 1.8);
+        model.traverse((part) => {
+          if (!part.isMesh) return;
+          part.castShadow = true;
+          part.receiveShadow = true;
+          const materials = Array.isArray(part.material) ? part.material : [part.material];
+          materials.forEach((materialItem) => {
+            if (!materialItem.map) return;
+            materialItem.map.colorSpace = THREE.SRGBColorSpace;
+            materialItem.map.magFilter = THREE.NearestFilter;
+            materialItem.map.minFilter = THREE.NearestFilter;
+            materialItem.map.anisotropy = 1;
+            materialItem.map.needsUpdate = true;
+          });
+        });
+        visual.add(model);
+      });
+      markShadowsDirty();
+    }, (error) => console.error("Impossible de charger le modèle de plante en pot.", error));
     refreshEditorObjectOptions();
     getEditorObjects().forEach(({ id, object }) => applyConfiguredPosition(id, object));
     addCorkBoard(scene);
@@ -877,6 +883,83 @@ export function createRoomScene(container, projects = []) {
       : SHOWCASE_BASE_ROTATION_Y;
   }
 
+  function getFittedShowcaseScale(trophy) {
+    const isMobile = window.matchMedia?.("(max-width: 760px)")?.matches;
+    const isCompactMobile = window.matchMedia?.("(max-width: 380px)")?.matches;
+    const baseScale = isCompactMobile ? 1.35 : isMobile ? 1.65 : SHOWCASE_FRONT_SCALE;
+    const originalPosition = trophy.position.clone();
+    const originalRotation = trophy.rotation.clone();
+    const originalScale = trophy.scale.clone();
+
+    trophy.position.set(0, -0.24, 0);
+    trophy.rotation.set(0, getShowcaseBaseRotationY(trophy), 0);
+    trophy.scale.setScalar(baseScale);
+    camera.updateMatrixWorld(true);
+    trophy.updateMatrixWorld(true);
+
+    const bounds = new THREE.Box3().setFromObject(trophy);
+    if (bounds.isEmpty()) {
+      trophy.position.copy(originalPosition);
+      trophy.rotation.copy(originalRotation);
+      trophy.scale.copy(originalScale);
+      return new THREE.Vector3(baseScale, baseScale, baseScale);
+    }
+
+    const min = bounds.min;
+    const max = bounds.max;
+    let left = Infinity;
+    let right = -Infinity;
+    let bottom = Infinity;
+    let top = -Infinity;
+    for (const x of [min.x, max.x]) {
+      for (const y of [min.y, max.y]) {
+        for (const z of [min.z, max.z]) {
+          const point = new THREE.Vector3(x, y, z).project(camera);
+          left = Math.min(left, point.x);
+          right = Math.max(right, point.x);
+          bottom = Math.min(bottom, point.y);
+          top = Math.max(top, point.y);
+        }
+      }
+    }
+
+    const panelBounds = document.querySelector("#trophyPanel .trophy-panel-inner")?.getBoundingClientRect();
+    const safeLeft = -0.94;
+    const safeRight = isMobile
+      ? 0.94
+      : Math.min(0.94, ((panelBounds?.left ?? window.innerWidth * 0.52) / window.innerWidth) * 2 - 1 - 0.05);
+    const safeBottom = isMobile && panelBounds
+      ? Math.max(-0.8, 1 - (panelBounds.top / window.innerHeight) * 2 + 0.06)
+      : -0.94;
+    const safeTop = 0.94;
+    const centerX = (left + right) / 2;
+    const centerY = (bottom + top) / 2;
+    const fit = Math.max(0, Math.min(
+      1,
+      left < safeLeft ? (centerX - safeLeft) / Math.max(0.01, centerX - left) : 1,
+      right > safeRight ? (safeRight - centerX) / Math.max(0.01, right - centerX) : 1,
+      bottom < safeBottom ? (centerY - safeBottom) / Math.max(0.01, centerY - bottom) : 1,
+      top > safeTop ? (safeTop - centerY) / Math.max(0.01, top - centerY) : 1
+    ));
+
+    trophy.position.copy(originalPosition);
+    trophy.rotation.copy(originalRotation);
+    trophy.scale.copy(originalScale);
+    return new THREE.Vector3(baseScale * fit, baseScale * fit, baseScale * fit);
+  }
+
+  function updateTrophyShowcaseFit() {
+    if (!showcasedTrophyName || showcaseTransition?.closing) return;
+    const trophy = shelfTrophies.find((entry) => entry.name === showcasedTrophyName);
+    if (!trophy) return;
+    const fittedScale = getFittedShowcaseScale(trophy);
+    if (showcaseTransition?.trophy === trophy) {
+      showcaseTransition.toScale.copy(fittedScale);
+    } else {
+      trophy.scale.copy(fittedScale);
+    }
+  }
+
   // Fresnel/rim shader kept unused here on purpose removed: the hover
   // effect is now handled by the OutlinePass in the post-processing
   // pipeline above, which draws a single clean line around a trophy's
@@ -915,12 +998,7 @@ export function createRoomScene(container, projects = []) {
       toPosition: new THREE.Vector3(0, -0.24, 0),
       toRotation: new THREE.Euler(0, showcaseBaseRotationY, 0),
       toQuaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, showcaseBaseRotationY, 0)),
-      toScale: (() => {
-        const isMobile = window.matchMedia?.("(max-width: 760px)")?.matches;
-        const isCompactMobile = window.matchMedia?.("(max-width: 380px)")?.matches;
-        const scale = isCompactMobile ? 1.35 : isMobile ? 1.65 : SHOWCASE_FRONT_SCALE;
-        return new THREE.Vector3(scale, scale, scale);
-      })(),
+      toScale: getFittedShowcaseScale(trophy),
       closing: false
     };
     showcaseTilt.x = 0;
@@ -2250,6 +2328,7 @@ export function createRoomScene(container, projects = []) {
     renderer.setSize(container.clientWidth, container.clientHeight, false);
     updateCameraProjection();
     updateTrophyShowcaseAnchor();
+    updateTrophyShowcaseFit();
     composer.setSize(container.clientWidth, container.clientHeight);
     outlinePass.resolution.set(container.clientWidth, container.clientHeight);
     updateCanvasBounds();

@@ -487,7 +487,7 @@ async function scheduleThreeSceneInitialization() {
 
     startupLoader.querySelector("strong").textContent = "Initialisation WebGL et chargement des textures";
     startupLoaderProgress.textContent = "Chargement 60 %";
-    const { createRoomScene } = await import("./assets/datas/room.js?v=alpha-cutout-4");
+    const { createRoomScene } = await import("./assets/datas/room.js?v=alpha-cutout-6");
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);

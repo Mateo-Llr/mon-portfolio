@@ -101,12 +101,12 @@
   },
   "plant": {
     "position": {
-      "x": 1.45,
+      "x": 1.438,
       "y": 0,
-      "z": -5
+      "z": -4.985
     },
     "rotationY": -15,
-    "scale": 1
+    "scale": 1.8
   },
   "cameraPositions": [
     {
@@ -361,7 +361,7 @@
       "z": 0.5
     },
     "rotationY": 65,
-    "scale": 0.5
+    "scale": 0.6
   },
   "java-cup-trophy": {
     "position": {
@@ -428,12 +428,12 @@
   },
   "salon-return-plant": {
     "position": {
-      "x": 10.05,
+      "x": 10.037,
       "y": 0.06,
-      "z": -2.1
+      "z": -1.907
     },
     "rotationY": -128,
-    "scale": 1
+    "scale": 1.6
   },
   "cassette-5": {
     "position": {
