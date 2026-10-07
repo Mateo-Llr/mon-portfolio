@@ -21,11 +21,16 @@
     <script type="importmap">
       {
         "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+          "three": "./vendor/three/build/three.module.min.js",
+          "three/addons/": "./vendor/three/addons/"
         }
       }
     </script>
+    <!-- Three.js est servi localement : aucun chargement 3D depuis un CDN tiers.
+         Le fichier est préchargé pendant l'analyse du HTML. -->
+    <link rel="modulepreload" href="./vendor/three/build/three.module.min.js" />
+    <link rel="modulepreload" href="./vendor/three/addons/loaders/MTLLoader.js" />
+    <link rel="modulepreload" href="./vendor/three/addons/loaders/OBJLoader.js" />
   </head>
   <body>
     <div class="startup-loader" id="startupLoader" role="status" aria-live="polite">
