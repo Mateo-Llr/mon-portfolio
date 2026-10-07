@@ -60,8 +60,6 @@ projects[0].screenTheme = {
   sectionBody: "#c9bdd4",
   scanline: "#c6a5e6",
   vignette: "rgba(12, 5, 20, .48)",
-  logoPlate: "#e9ddf2",
-  logoPlateBorder: "#b89bd2",
   titleGlow: "rgba(214, 183, 242, .32)"
 };
 projects[1].screenTheme = {
@@ -74,8 +72,6 @@ projects[1].screenTheme = {
   sectionBody: "#bec5ae",
   scanline: "#c8b783",
   vignette: "rgba(5, 10, 16, .52)",
-  logoPlate: "#e5d7ad",
-  logoPlateBorder: "#9a7650",
   titleGlow: "rgba(214, 191, 135, .3)"
 };
 projects[2].screenTheme = {
@@ -599,6 +595,19 @@ function openProjectSheet(index) {
   const project = projects[index];
   if (!project) return;
 
+  const screenTheme = project.screenTheme || {};
+  const sheetTheme = {
+    "--sheet-background": screenTheme.background || "#182c2d",
+    "--sheet-grid": screenTheme.grid || "rgba(101, 198, 194, .055)",
+    "--sheet-accent": screenTheme.accent || "#65c6c2",
+    "--sheet-highlight": screenTheme.primary || "#c3eee0",
+    "--sheet-ink": screenTheme.body || "#e7dfcc",
+    "--sheet-muted": screenTheme.sectionBody || "#b9b9a7",
+    "--sheet-title-glow": screenTheme.titleGlow || "rgba(101, 198, 194, .14)"
+  };
+  Object.entries(sheetTheme).forEach(([property, value]) => {
+    projectSheet.style.setProperty(property, value);
+  });
   sheetKicker.textContent = project.date || `ARCHIVE / 0${index + 1}`;
   sheetIndex.textContent = `PROJECT 0${index + 1}`;
   sheetTitle.innerHTML = project.gameTitleTexture

@@ -96,18 +96,8 @@ export function drawProjectScreen(canvas, project, index, isEjected = false, req
       const imageScale = Math.min(maxWidth / titleImage.naturalWidth, maxHeight / titleImage.naturalHeight);
       const imageWidth = titleImage.naturalWidth * imageScale;
       const imageHeight = titleImage.naturalHeight * imageScale;
-      if (theme.logoPlate) {
-        context.shadowBlur = 0;
-        context.fillStyle = theme.logoPlate;
-        context.fillRect(66, 70, 500, 164);
-        if (theme.logoPlateBorder) {
-          context.strokeStyle = theme.logoPlateBorder;
-          context.lineWidth = 2;
-          context.strokeRect(66, 70, 500, 164);
-        }
-      }
       context.save();
-      context.shadowBlur = 0;
+      context.shadowBlur = 8;
       context.imageSmoothingEnabled = false;
       context.drawImage(titleImage, 82, 88 + (maxHeight - imageHeight) / 2, imageWidth, imageHeight);
       context.restore();

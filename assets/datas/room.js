@@ -4,7 +4,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { loadSharedModel, onIdle, onVisible, loadSharedTexture, loadSharedPixelData, clearSharedCache } from "./model-cache.js?v=alpha-cutout-2";
-import { drawProjectScreen } from "./screen-renderer.js?v=menu-themes-1";
+import { drawProjectScreen } from "./screen-renderer.js?v=menu-themes-2";
 
 function material(color, roughness = 0.72, metalness = 0) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness });

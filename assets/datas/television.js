@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { loadSharedModel, onIdle, onVisible, onVisibilityChange, loadSharedTexture, loadSharedPixelData } from "./model-cache.js?v=alpha-cutout-2";
-import { drawProjectScreen } from "./screen-renderer.js?v=menu-themes-1";
+import { drawProjectScreen } from "./screen-renderer.js?v=menu-themes-2";
 
 const SCREEN_WIDTH = 960;
 const SCREEN_HEIGHT = 540;

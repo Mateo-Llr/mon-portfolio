@@ -666,23 +666,36 @@ body.is-projects-focus .cassette-stage { opacity: 1; transition: opacity .35s ea
 .project-sheet {
   --sheet-accent: #65c6c2;
   --sheet-highlight: #c3eee0;
-  --sheet-border: rgba(101, 198, 194, .62);
+  --sheet-background: #182c2d;
+  --sheet-grid: rgba(101, 198, 194, .055);
+  --sheet-ink: #e7dfcc;
+  --sheet-muted: #b9b9a7;
+  --sheet-title-glow: rgba(101, 198, 194, .14);
 }
 .project-sheet .sheet-panel {
-  border-top-color: var(--sheet-border);
-  border-bottom-color: var(--sheet-border);
+  color: var(--sheet-ink);
+  border-top-color: color-mix(in srgb, var(--sheet-accent) 62%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--sheet-accent) 62%, transparent);
   background:
-    linear-gradient(90deg, rgba(101, 198, 194, .055) 1px, transparent 1px) 0 0 / 76px 100%,
-    linear-gradient(135deg, #182c2d, #17231f 72%);
+    linear-gradient(90deg, var(--sheet-grid) 1px, transparent 1px) 0 0 / 76px 100%,
+    var(--sheet-background);
 }
-.project-sheet .sheet-panel::before { background: rgba(101, 198, 194, .3); }
+.project-sheet .sheet-panel::before { background: color-mix(in srgb, var(--sheet-accent) 30%, transparent); }
+.project-sheet .sheet-toolbar {
+  color: var(--sheet-muted);
+  border-bottom-color: color-mix(in srgb, var(--sheet-ink) 24%, transparent);
+  background: color-mix(in srgb, var(--sheet-background) 82%, transparent);
+}
 .project-sheet .sheet-close {
   border-color: var(--sheet-accent);
   color: var(--sheet-accent);
+  background: transparent;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sheet-accent) 16%, transparent);
 }
 .project-sheet .sheet-close:hover {
-  color: #10211f;
+  color: var(--sheet-background);
   background: var(--sheet-accent);
+  box-shadow: 0 7px 0 color-mix(in srgb, var(--sheet-accent) 36%, transparent);
 }
 .project-sheet .sheet-index {
   border-top-color: var(--sheet-accent);
@@ -690,8 +703,11 @@ body.is-projects-focus .cassette-stage { opacity: 1; transition: opacity .35s ea
 }
 .project-sheet .sheet-body h2 {
   color: var(--sheet-highlight);
-  text-shadow: 0 0 22px rgba(101, 198, 194, .14);
+  text-shadow: 0 0 22px var(--sheet-title-glow);
 }
+.project-sheet .sheet-meta { color: var(--sheet-muted); }
+.project-sheet .sheet-lead { color: var(--sheet-ink); }
+.project-sheet .sheet-content { color: var(--sheet-muted); }
 .sheet-game-title-image {
   display: block;
   width: min(100%, 650px);
@@ -699,12 +715,22 @@ body.is-projects-focus .cassette-stage { opacity: 1; transition: opacity .35s ea
   object-fit: contain;
   object-position: left center;
   image-rendering: pixelated;
+  filter: drop-shadow(0 0 3px var(--sheet-title-glow));
 }
 .project-sheet .sheet-rule { background: var(--sheet-accent); }
 .project-sheet .sheet-content h3 { color: var(--sheet-accent); }
 .project-sheet .sheet-tags span {
-  border-color: rgba(101, 198, 194, .58);
+  border-color: color-mix(in srgb, var(--sheet-accent) 58%, transparent);
   color: var(--sheet-accent);
+}
+.project-sheet .sheet-content .project-external-link {
+  border-color: color-mix(in srgb, var(--sheet-accent) 55%, transparent);
+  color: var(--sheet-accent);
+}
+.project-sheet .sheet-content .project-external-link:hover,
+.project-sheet .sheet-content .project-external-link:focus-visible {
+  color: var(--sheet-background);
+  background: var(--sheet-accent);
 }
 .project-sheet .sheet-tools {
   display: flex;
@@ -728,10 +754,10 @@ body.is-projects-focus .cassette-stage { opacity: 1; transition: opacity .35s ea
   height: 24px;
   place-items: center;
   object-fit: contain;
-  border: 1px solid rgba(101, 198, 194, .58);
+  border: 1px solid color-mix(in srgb, var(--sheet-accent) 58%, transparent);
 }
 .project-sheet .sheet-tool-icon-python {
-  color: #17231f;
+  color: var(--sheet-background);
   background: var(--sheet-highlight);
   font: 700 11px Georgia, serif;
   letter-spacing: -.08em;
@@ -753,13 +779,13 @@ body.is-projects-focus .cassette-stage { opacity: 1; transition: opacity .35s ea
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  border: 1px solid rgba(101, 198, 194, .44);
+  border: 1px solid color-mix(in srgb, var(--sheet-accent) 44%, transparent);
   image-rendering: pixelated;
 }
 .project-sheet .sheet-gallery-empty > div {
   aspect-ratio: 16 / 9;
-  border: 1px solid rgba(101, 198, 194, .28);
-  background: rgba(101, 198, 194, .035);
+  border: 1px solid color-mix(in srgb, var(--sheet-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--sheet-accent) 4%, transparent);
 }
 @media (max-width: 600px) {
   .project-sheet .sheet-tools { margin-top: 14px; }
