@@ -26,8 +26,30 @@ projects.push({
   projectMeta: "<div class=\"sheet-tools\"><div class=\"sheet-tool\"><img src=\"assets/textures/icons/html.svg\" alt=\"Icône HTML\"><span>HTML</span></div><div class=\"sheet-tool\"><img src=\"assets/textures/icons/javascript.svg\" alt=\"Icône JavaScript\"><span>JAVASCRIPT</span></div></div><div class=\"sheet-tags\"><span>MINAGE</span><span>EXPLORATION</span><span>PIXEL ART</span><span>GESTION DES RESSOURCES</span></div>",
   content: "<h3>Le principe du jeu</h3><p>Le joueur incarne un petit personnage équipé d'une tête de foreuse. Il descend sous la surface d'une planète pour trouver des minerais, puis remonte à la surface afin d'améliorer ses performances.</p><h3>Une descente à gérer</h3><p>Chaque expédition demande de surveiller la batterie, l'énergie, la chaleur ambiante et le poids maximal que le personnage peut transporter.</p><h3>Un projet en développement</h3><p>Deep Driller est créé en HTML et JavaScript dans un style pixel art très rétro et minimaliste.</p><div class=\"sheet-gallery-block\"><h3>Images du projet</h3><div class=\"sheet-gallery\"><img src=\"assets/projects/deep_driller/deep_driller_1.png\" alt=\"Écran de jeu de Deep Driller\"><img src=\"assets/projects/deep_driller/deep_driller_2.png\" alt=\"Exploration souterraine dans Deep Driller\"><img src=\"assets/projects/deep_driller/deep_driller_3.png\" alt=\"Interface de Deep Driller\"><img src=\"assets/projects/deep_driller/deep_driller_4.png\" alt=\"Personnage de Deep Driller\"></div></div>"
 });
+projects.push({
+  title: "SCRIBBLED",
+  meta: "JEU EN LIGNE&nbsp;&nbsp; / &nbsp;&nbsp;2026",
+  date: "2026—",
+  description: "Un platformer dessiné à la main, accessible directement dans le navigateur.",
+  lead: "Dessine ton personnage, puis pars explorer un monde de papier en platformer, guidé par une narratrice.",
+  projectMeta: "<div class=\"sheet-tools\"><div class=\"sheet-tool\"><img src=\"assets/textures/icons/html.svg\" alt=\"Icône HTML\"><span>HTML</span></div><div class=\"sheet-tool\"><img src=\"assets/textures/icons/javascript.svg\" alt=\"Icône JavaScript\"><span>JAVASCRIPT</span></div></div><div class=\"sheet-tags\"><span>JEU EN LIGNE</span><span>PLATFORMER</span><span>DESSIN</span><span>ACCESSIBLE</span></div>",
+  content: "<p>Scribbled est un petit jeu jouable directement dans le navigateur. Avant de partir à l'aventure, dessine ton propre personnage et donne-lui l'apparence que tu veux.</p><h3>Un monde dessiné</h3><p>Explore un univers de platformer au style papier, fait de traits, de couleurs et de décors qui semblent sortis d'un carnet. Une narratrice t'accompagne au fil de la découverte.</p><h3>Simple et accueillant</h3><p>Scribbled mise sur une prise en main facile et une expérience accessible : on crée son personnage, on joue et on découvre le monde à son rythme.</p><p><a class=\"project-external-link\" href=\"https://mateo-llr.github.io/Scribbled/\" target=\"_blank\" rel=\"noopener noreferrer\">JOUER À SCRIBBLED <span aria-hidden=\"true\">↗</span></a></p><div class=\"sheet-gallery-block\"><h3>Images du projet</h3><div class=\"sheet-gallery sheet-gallery-empty\"><div aria-label=\"Image à venir\"></div><div aria-label=\"Image à venir\"></div><div aria-label=\"Image à venir\"></div><div aria-label=\"Image à venir\"></div></div></div>"
+});
 projects[0].gameTitleImage = "assets/projects/soulfract/game_title.png";
+projects[0].galleryImages = [
+  { src: "assets/projects/soulfract/soulfract_1.png", alt: "Capture de Soulfract dans une zone verdoyante" },
+  { src: "assets/projects/soulfract/soulfract_2.png", alt: "Deux personnages réunis autour d'un feu" },
+  { src: "assets/projects/soulfract/soulfract_3.png", alt: "Un personnage explore une zone traversée par des rails" },
+  { src: "assets/projects/soulfract/soulfract_4.png", alt: "Un personnage accompagné de plusieurs animaux" }
+];
 projects[1].gameTitleImage = "assets/projects/rust_and_roots/game_title.png";
+projects[3].gameTitleImage = "assets/projects/scribbled/game_title.png";
+projects[3].galleryImages = [
+  { src: "assets/projects/scribbled/scribbled_1.png", alt: "Personnage dessiné dans un niveau au style carnet" },
+  { src: "assets/projects/scribbled/scribbled_2.png", alt: "Interface de création et de dessin du personnage" },
+  { src: "assets/projects/scribbled/scribbled_3.png", alt: "Le personnage rencontre un ennemi dans le niveau" },
+  { src: "assets/projects/scribbled/scribbled_4.png", alt: "Édition d'une pièce du personnage dessiné" }
+];
 
 const trophies = {
   "scratch-trophy": {
@@ -411,26 +433,28 @@ async function scheduleThreeSceneInitialization() {
       startupLoaderProgress.textContent = `Chargement ${progress} %`;
     })));
 
-    const imageAssets = [
-      "assets/textures/wallpaper.png",
-      "assets/textures/skybox.png",
-      "assets/textures/floor_wood.png",
-      "assets/textures/floor_kitchen.png",
-      "assets/textures/television_actions.png",
-      "assets/textures/board.png",
-      "assets/textures/television.png",
-      "assets/textures/cassettes/cassette-jaune.png",
-      "assets/textures/cassettes/cassette-orange.png",
-      "assets/textures/cassettes/cassette-violette.png",
-      "assets/textures/cassettes/vhs.png",
-      "assets/textures/icons/contact.png",
-      "assets/textures/icons/vscode.png",
-      "assets/textures/icons/github.png",
-      "assets/textures/icons/blockbench.png",
-      "assets/textures/icons/case.png",
-      ...projects.map((project) => project.gameTitleImage).filter(Boolean)
-    ];
-    startupLoader.querySelector("strong").textContent = "Chargement des textures";
+    startupLoader.querySelector("strong").textContent = "Initialisation WebGL et chargement des textures";
+    startupLoaderProgress.textContent = "Chargement 60 %";
+    const { createRoomScene } = await import("./assets/datas/room.js?v=alpha-cutout-2");
+    roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
+    roomScene.setTelevisionHandler(handleTelevisionClick);
+    roomScene.setTelevisionActionHandler(handleTelevisionClick);
+    roomScene.onProjectsFocusReached(() => roomScene.activateTelevisionFeatures());
+    roomScene.setCassetteSelectHandler((index) => selectProject(index));
+    roomScene.setCupHandler(() => roomScene.focusOnCameraIndex(9));
+    roomScene.setLaptopHandler((action) => {
+      if (action === "desktop") {
+        roomScene.focusOnCameraIndex(1, () => setDesktopVisible(true));
+      } else {
+        roomScene.focusOnCameraIndex(3);
+      }
+    });
+    roomScene.setReturnHandler(() => roomScene.focusOnInitialView());
+    roomScene.setProjectsHandler(() => roomScene.focusOnAchievements());
+    roomScene.setTrophySelectHandler((id) => openTrophyPanel(id));
+    roomScene.updateScreen(projects[0], true);
+
+    const imageAssets = projects.map((project) => project.gameTitleImage).filter(Boolean);
     let loadedImages = 0;
     await Promise.all(imageAssets.map((path) => new Promise((resolve) => {
       const image = new Image();
@@ -451,31 +475,12 @@ async function scheduleThreeSceneInitialization() {
     })));
 
     await terminalTyping;
-    startupLoader.querySelector("strong").textContent = "Construction de la scène 3D";
+    startupLoader.querySelector("strong").textContent = "Compilation de la scène WebGL";
     startupLoaderBar.style.width = "78%";
     startupLoaderProgress.textContent = "Chargement 78 %";
-    const { createRoomScene } = await import("./assets/datas/room.js?v=alpha-cutout-2");
-    roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
-    roomScene.setTelevisionHandler(handleTelevisionClick);
-    roomScene.setTelevisionActionHandler(handleTelevisionClick);
-    roomScene.onProjectsFocusReached(() => roomScene.activateTelevisionFeatures());
-    roomScene.setCassetteSelectHandler((index) => selectProject(index));
-    roomScene.setCupHandler(() => roomScene.focusOnCameraIndex(9));
-    roomScene.setLaptopHandler((action) => {
-      if (action === "desktop") {
-        roomScene.focusOnCameraIndex(1, () => setDesktopVisible(true));
-      } else {
-        roomScene.focusOnCameraIndex(3);
-      }
-    });
-    roomScene.setReturnHandler(() => roomScene.focusOnInitialView());
-    roomScene.setProjectsHandler(() => roomScene.focusOnAchievements());
-    roomScene.setTrophySelectHandler((id) => openTrophyPanel(id));
-    roomScene.updateScreen(projects[0], true);
-    startupLoader.querySelector("strong").textContent = "Initialisation du rendu WebGL";
+    await roomScene.ready;
     startupLoaderBar.style.width = "92%";
     startupLoaderProgress.textContent = "Chargement 92 %";
-    await roomScene.ready;
 
     await new Promise((resolve) => {
       const loaderContent = startupLoader.querySelector(".startup-loader-inner");
@@ -547,6 +552,16 @@ function openProjectSheet(index) {
   sheetProjectMeta.innerHTML = project.projectMeta || "";
   sheetLead.textContent = project.lead;
   sheetContent.innerHTML = project.content;
+  const gallery = sheetContent.querySelector(".sheet-gallery");
+  if (gallery && project.galleryImages) {
+    gallery.classList.remove("sheet-gallery-empty");
+    gallery.replaceChildren(...project.galleryImages.map(({ src, alt }) => {
+      const image = document.createElement("img");
+      image.src = src;
+      image.alt = alt;
+      return image;
+    }));
+  }
   projectSheet.classList.add("is-visible");
   projectSheet.setAttribute("aria-hidden", "false");
   document.body.classList.add("is-sheet-open");
