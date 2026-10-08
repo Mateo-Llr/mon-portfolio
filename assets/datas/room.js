@@ -1113,6 +1113,10 @@ export function createRoomScene(container, projects = []) {
     hoverUv: { value: new THREE.Vector2() },
     hasHoveredAction: { value: 0 }
   };
+  const roomCrtUniforms = {
+    time: { value: 0 },
+    active: { value: 0 }
+  };
 
   function activateRoomTelevisionFeatures() {
     if (roomTelevisionFeaturesLoaded || !roomTelevision) return;
@@ -1471,6 +1475,7 @@ export function createRoomScene(container, projects = []) {
   function drawRoomScreen(project, isEjected = false) {
     activeRoomScreenProject = project;
     activeRoomScreenEjected = isEjected;
+    roomCrtUniforms.active.value = isEjected ? 0 : 1;
     const screenMesh = roomTelevision?.getObjectByName("screen");
     if (screenMesh && roomScreenMaterial && roomBaseScreenMap && roomBaseScreenUvs && roomDynamicScreenUvs) {
       screenMesh.geometry.setAttribute("uv", isEjected ? roomBaseScreenUvs : roomDynamicScreenUvs);
@@ -1488,6 +1493,7 @@ export function createRoomScene(container, projects = []) {
   }
 
   function updateDynamicLighting(time) {
+    roomCrtUniforms.time.value = time * 0.001;
     const hour = getRoomHour();
     const sunrise = 6.5;
     const sunset = 21.5;
@@ -1565,6 +1571,28 @@ export function createRoomScene(container, projects = []) {
       );
     };
     material.customProgramCacheKey = () => "room-television-action-highlight-v1";
+  }
+
+  function addRoomCrtEffect(material) {
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.roomCrtTime = roomCrtUniforms.time;
+      shader.uniforms.roomCrtActive = roomCrtUniforms.active;
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <map_pars_fragment>",
+        "#include <map_pars_fragment>\nuniform float roomCrtTime;\nuniform float roomCrtActive;"
+      ).replace(
+        "#include <opaque_fragment>",
+        `#include <opaque_fragment>
+          float roomCrtScanline = 0.9 + 0.1 * sin(vMapUv.y * 565.0 + roomCrtTime * 2.4);
+          float roomCrtDistance = length((vMapUv - vec2(0.5)) * vec2(1.0, 0.72));
+          float roomCrtVignette = 1.0 - 0.28 * smoothstep(0.28, 0.72, roomCrtDistance);
+          float roomCrtFlicker = 0.99 + 0.01 * sin(roomCrtTime * 3.7);
+          float roomCrtRoll = 1.0 - smoothstep(0.0, 0.035, abs(fract(vMapUv.y + roomCrtTime * 0.08) - 0.5));
+          float roomCrtEffect = roomCrtScanline * roomCrtVignette * roomCrtFlicker + roomCrtRoll * 0.035;
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * roomCrtEffect, roomCrtActive);`
+      );
+    };
+    material.customProgramCacheKey = () => "room-television-crt-v1";
   }
 
   function createStickyNote({ title, lines = [], color = "#f6e27a", textColor = "#2c2415", width = 0.46, height = 0.46, interactionType = null, actionUrl = null, iconPath = null } = {}) {
@@ -1979,6 +2007,7 @@ export function createRoomScene(container, projects = []) {
             part.geometry.setAttribute("uv1", roomBaseScreenUvs.clone());
             roomDynamicScreenUvs = mapScreenUvs(part);
             roomScreenMaterial = clonedMaterial;
+            addRoomCrtEffect(roomScreenMaterial);
           }
           part.material = clonedMaterial;
         });

@@ -50,6 +50,16 @@ projects[3].galleryImages = [
   { src: "assets/projects/scribbled/scribbled_3.png", alt: "Le personnage rencontre un ennemi dans le niveau" },
   { src: "assets/projects/scribbled/scribbled_4.png", alt: "Édition d'une pièce du personnage dessiné" }
 ];
+projects.push({
+  title: "ENERGIZED",
+  meta: "JEU VIDÉO + PIXEL ART&nbsp;&nbsp; / &nbsp;&nbsp;PYTHON",
+  date: "PREMIERS PROJETS",
+  description: "Un de mes premiers jeux : un Beat'em Up en pixel art créé en Python, porté par un héros qui carbure aux boissons énergisantes.",
+  lead: "Energized est l'un de mes premiers projets de jeu vidéo : un Beat'em Up en pixel art créé en Python, autour d'un héros grand amateur de boissons énergisantes.",
+  projectMeta: "<div class=\"sheet-tools\"><div class=\"sheet-tool\"><img src=\"assets/textures/icons/python.svg\" alt=\"Icône Python\"><span>PYTHON</span></div></div><div class=\"sheet-tags\"><span>BEAT'EM UP</span><span>PIXEL ART</span><span>JEU D'ACTION</span></div>",
+  content: "<p>Energized fait partie de mes premières créations vidéoludiques. Je l'ai imaginé comme un Beat'em Up en pixel art, avec un héros qui carbure aux boissons énergisantes.</p><h3>Un jeu d'action en pixel art</h3><p>Le joueur affronte des adversaires dans des rues colorées, dans une ambiance arcade inspirée des jeux de combat à défilement.</p><h3>Premiers pas en Python</h3><p>Ce projet m'a permis de découvrir la création de jeux vidéo et de mettre en pratique mes premières bases en Python.</p><div class=\"sheet-gallery-block\"><h3>Images du projet</h3><div class=\"sheet-gallery\"><img src=\"assets/projects/energized/energized_1.png\" alt=\"Écran titre du jeu Energized\"><img src=\"assets/projects/energized/energized_2.png\" alt=\"Premier niveau de Energized avec son héros en pixel art\"><img src=\"assets/projects/energized/energized_3.png\" alt=\"Combat entre le héros et un adversaire dans Energized\"><img src=\"assets/projects/energized/energized_4.png\" alt=\"Personnage et adversaire avec leurs barres de vie dans Energized\"></div></div>"
+});
+projects[4].gameTitleImage = "assets/projects/energized/game_title.png";
 projects[0].screenTheme = {
   background: "#21172d",
   grid: "rgba(190, 151, 226, .16)",
@@ -95,6 +105,18 @@ projects[3].screenTheme = {
   sectionBody: "#5e5869",
   scanline: "#756c7e",
   vignette: "rgba(35, 29, 46, .2)"
+};
+projects[4].screenTheme = {
+  background: "#18252b",
+  grid: "rgba(105, 222, 65, .14)",
+  primary: "#e7f4dd",
+  secondary: "#a7d77c",
+  accent: "#69de41",
+  body: "#e7f4dd",
+  sectionBody: "#b9c9b3",
+  scanline: "#8ccb70",
+  vignette: "rgba(8, 18, 20, .48)",
+  titleGlow: "rgba(105, 222, 65, .28)"
 };
 
 const trophies = {
