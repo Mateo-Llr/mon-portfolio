@@ -118,6 +118,33 @@ projects[4].screenTheme = {
   vignette: "rgba(8, 18, 20, .48)",
   titleGlow: "rgba(105, 222, 65, .28)"
 };
+projects.push({
+  title: "MINICRAFT",
+  meta: "JEU EN LIGNE&nbsp;&nbsp; / &nbsp;&nbsp;HTML + JAVASCRIPT",
+  date: "JEU EN LIGNE",
+  description: "Un jeu d'aventure et de création en 2D, inspiré de Minecraft et des jeux rétro sur NES.",
+  lead: "Minicraft reprend en 2D les mécaniques de base de Minecraft dans un style rétro inspiré de la NES.",
+  projectMeta: "<div class=\"sheet-tools\"><div class=\"sheet-tool\"><img src=\"assets/textures/icons/html.svg\" alt=\"Icône HTML\"><span>HTML</span></div><div class=\"sheet-tool\"><img src=\"assets/textures/icons/javascript.svg\" alt=\"Icône JavaScript\"><span>JAVASCRIPT</span></div></div><div class=\"sheet-tags\"><span>JEU EN LIGNE</span><span>GÉNÉRATION ALÉATOIRE</span><span>EXPLORATION</span><span>2D RÉTRO</span></div>",
+  content: "<p>Minicraft est un projet de jeu en 2D inspiré de Minecraft, avec une présentation rétro qui rappelle les jeux de la NES.</p><h3>Explorer un monde généré</h3><p>Chaque partie propose une carte générée aléatoirement, avec différents biomes, des caves à explorer, des minerais à découvrir et des arbres à récolter.</p><h3>Des mécaniques de base</h3><p>Le jeu reprend les bases de l'exploration et de la création, avec quelques petites entités qui peuplent le monde.</p><h3>Jouer à Minicraft</h3><p><a class=\"project-external-link\" href=\"https://mateo-llr.github.io/Minicraft\" target=\"_blank\" rel=\"noopener noreferrer\">JOUER À MINICRAFT <span aria-hidden=\"true\">↗</span></a></p><div class=\"sheet-gallery-block\"><h3>Images du projet</h3><div class=\"sheet-gallery sheet-gallery-empty\"><div aria-label=\"Image à venir\"></div><div aria-label=\"Image à venir\"></div><div aria-label=\"Image à venir\"></div><div aria-label=\"Image à venir\"></div></div></div>"
+});
+projects[5].galleryImages = [
+  { src: "assets/projects/minicraft/minicraft_1.png", alt: "Écran titre et menu principal de Minicraft" },
+  { src: "assets/projects/minicraft/minicraft_2.png", alt: "Exploration d'une cave éclairée à la torche dans Minicraft" },
+  { src: "assets/projects/minicraft/minicraft_3.png", alt: "Exploration d'un biome forestier dans Minicraft" },
+  { src: "assets/projects/minicraft/minicraft_4.png", alt: "Exploration du monde de Minicraft sous la pluie" }
+];
+projects[5].screenTheme = {
+  background: "#18281b",
+  grid: "rgba(145, 190, 105, .16)",
+  primary: "#e8edc3",
+  secondary: "#c5d88a",
+  accent: "#85a957",
+  body: "#e8edc3",
+  sectionBody: "#bec9a4",
+  scanline: "#a6c478",
+  vignette: "rgba(7, 16, 9, .5)",
+  titleGlow: "rgba(153, 198, 100, .28)"
+};
 
 const trophies = {
   "scratch-trophy": {
