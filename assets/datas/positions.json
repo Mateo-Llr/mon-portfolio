@@ -453,6 +453,15 @@
     "rotationY": -40,
     "scale": 0.96
   },
+  "cassette-7": {
+    "position": {
+      "x": 10.733,
+      "y": 0.94,
+      "z": -3.982
+    },
+    "rotationY": -69,
+    "scale": 0.96
+  },
   "my-photo": {
     "position": {
       "x": -2.6,

@@ -145,6 +145,27 @@ projects[5].screenTheme = {
   vignette: "rgba(7, 16, 9, .5)",
   titleGlow: "rgba(153, 198, 100, .28)"
 };
+projects.push({
+  title: "FORMULA<br>1",
+  meta: "ARCHIVES F1&nbsp;&nbsp; / &nbsp;&nbsp;1950—2000",
+  date: "EN DÉVELOPPEMENT",
+  description: "Une archive de la Formule 1, de ses premières saisons jusqu'en 2000.",
+  lead: "Un site consacré aux différentes années de Formule 1, avec les informations sur les pilotes, les écuries et les calendriers.",
+  projectMeta: "<div class=\"sheet-tags\"><span>FORMULE 1</span><span>HISTOIRE</span><span>1950—2000</span><span>EN DÉVELOPPEMENT</span></div>",
+  content: "<h3>Une archive saison par saison</h3><p>Le site rassemble les informations des saisons de Formule 1, notamment les pilotes, les écuries et les calendriers. Le contenu est actuellement complété jusqu'à l'année 2000.</p><h3>Un projet en cours</h3><p>L'archive continue de s'enrichir au fil du développement.</p><h3>Explorer le site</h3><p><a class=\"project-external-link\" href=\"https://mateo-llr.github.io/F1/\" target=\"_blank\" rel=\"noopener noreferrer\">VISITER LE SITE F1 <span aria-hidden=\"true\">↗</span></a></p>"
+});
+projects[6].screenTheme = {
+  background: "#191d24",
+  grid: "rgba(211, 36, 43, .16)",
+  primary: "#f4e8df",
+  secondary: "#d2a8a6",
+  accent: "#e13b40",
+  body: "#f2e8df",
+  sectionBody: "#c9b8b5",
+  scanline: "#e35a5e",
+  vignette: "rgba(16, 8, 10, .52)",
+  titleGlow: "rgba(225, 59, 64, .3)"
+};
 
 const trophies = {
   "scratch-trophy": {
