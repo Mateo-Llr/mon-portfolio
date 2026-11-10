@@ -31,6 +31,14 @@
     <link rel="modulepreload" href="./vendor/three/build/three.module.min.js" />
     <link rel="modulepreload" href="./vendor/three/addons/loaders/MTLLoader.js" />
     <link rel="modulepreload" href="./vendor/three/addons/loaders/OBJLoader.js" />
+    <link rel="modulepreload" href="./vendor/three/addons/postprocessing/EffectComposer.js" />
+    <link rel="modulepreload" href="./vendor/three/addons/postprocessing/RenderPass.js" />
+    <link rel="modulepreload" href="./vendor/three/addons/postprocessing/OutlinePass.js" />
+    <link rel="modulepreload" href="./vendor/three/addons/postprocessing/OutputPass.js" />
+    <!-- Modules de la scène préchargés en parallèle (URLs identiques à celles de script.js / room.js) -->
+    <link rel="modulepreload" href="./assets/datas/room.js?v=alpha-cutout-7" />
+    <link rel="modulepreload" href="./assets/datas/model-cache.js?v=alpha-cutout-2" />
+    <link rel="modulepreload" href="./assets/datas/screen-renderer.js?v=menu-themes-2" />
   </head>
   <body>
     <div class="startup-loader" id="startupLoader" role="status" aria-live="polite">
@@ -122,6 +130,6 @@
         </div>
       </div>
     </aside>
-    <script type="module" src="script.js?v=desktop-notepad-11"></script>
+    <script type="module" src="script.js?v=desktop-notepad-12"></script>
   </body>
 </html>

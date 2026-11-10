@@ -105,8 +105,15 @@ function addDynamicSky(scene, getHour) {
     return generatedFaces;
   }
 
+  // Régénérer les 6 faces + le cubemap d'environnement (PMREM) coûte cher et
+  // provoquait un à-coup toutes les 60 s. On ne le refait que lorsque la teinte
+  // a réellement changé (pas de 1/48, imperceptible).
+  let lastSkyTintStep = -1;
   function applySkyboxTint(daylight) {
     if (!skyboxFaces.length) return;
+    const tintStep = Math.round(daylight * 48);
+    if (tintStep === lastSkyTintStep) return;
+    lastSkyTintStep = tintStep;
 
     const nightTint = new THREE.Color(0x30496b);
     const dayTint = new THREE.Color(0xeaf6ff);
@@ -163,6 +170,7 @@ function addDynamicSky(scene, getHour) {
     skyboxCube.needsUpdate = true;
     scene.background = skyboxCube;
     scene.environment = skyboxCube;
+    lastSkyTintStep = -1;
     updateSky();
   });
 
