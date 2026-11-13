@@ -528,7 +528,7 @@ async function scheduleThreeSceneInitialization() {
     // Tout ce qui est indépendant démarre immédiatement et en parallèle des modèles :
     // les deux modules JS (téléchargement + analyse) et les images des titres.
     const modelCachePromise = import("./assets/datas/model-cache.js?v=alpha-cutout-2");
-    const roomModulePromise = import("./assets/datas/room.js?v=alpha-cutout-7");
+    const roomModulePromise = import("./assets/datas/room.js?v=alpha-cutout-8");
     roomModulePromise.catch(() => {}); // évite un "unhandled rejection" avant le await plus bas
     const imageAssets = projects.map((project) => project.gameTitleImage).filter(Boolean);
     const imagePromises = imageAssets.map((path) => new Promise((resolve) => {

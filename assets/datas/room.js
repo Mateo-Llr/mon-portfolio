@@ -2732,7 +2732,11 @@ export function createRoomScene(container, projects = []) {
     updateAboutPhotoPresentation(time);
     updateTrophyShowcaseTransition();
     updateTrophyShowcaseTilt();
-    composer.render();
+    if (outlinePass.selectedObjects.length > 0) {
+      composer.render();
+    } else {
+      renderer.render(scene, camera);
+    }
     if (introTransitionPending) {
       introTransitionPending = false;
       focusOnInitialView();
