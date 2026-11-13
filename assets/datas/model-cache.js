@@ -16,6 +16,9 @@ if (assetCacheBust) {
 }
 const modelQueue = [];
 let activeModelLoads = 0;
+// Plusieurs modèles sont téléchargés en même temps (avant : un seul à la fois, donc ~40 requêtes en file).
+// Le parsing reste exécuté sur le thread principal, une tâche à la fois.
+const MAX_CONCURRENT_MODEL_LOADS = 6;
 const modelLoadListeners = new Set();
 
 function notifyModelLoadProgress() {
@@ -24,17 +27,17 @@ function notifyModelLoadProgress() {
 }
 
 function processModelQueue() {
-  if (activeModelLoads > 0 || modelQueue.length === 0) return;
-
-  const { key, load } = modelQueue.shift();
-  activeModelLoads += 1;
-  notifyModelLoadProgress();
-  load()
-    .finally(() => {
-      activeModelLoads -= 1;
-      notifyModelLoadProgress();
-      processModelQueue();
-    });
+  while (activeModelLoads < MAX_CONCURRENT_MODEL_LOADS && modelQueue.length > 0) {
+    const { load } = modelQueue.shift();
+    activeModelLoads += 1;
+    notifyModelLoadProgress();
+    load()
+      .finally(() => {
+        activeModelLoads -= 1;
+        notifyModelLoadProgress();
+        processModelQueue();
+      });
+  }
 }
 
 // Loads (and parses) a given .mtl/.obj pair only once, no matter how many
@@ -50,6 +53,10 @@ export function loadSharedModel(mtlPath, objPath) {
       modelQueue.push({
         key,
         load: () => new Promise((loadResolve, loadReject) => {
+          // Le .obj est téléchargé en même temps que le .mtl (avant : l'un après l'autre).
+          // OBJLoader.load() = FileLoader + parse(), donc le résultat est identique.
+          const objectText = new THREE.FileLoader().loadAsync(objPath);
+          objectText.catch(() => {}); // l'erreur est gérée plus bas ; évite un rejet non capturé si le .mtl échoue d'abord
           const materialLoader = new MTLLoader();
           materialLoader.load(
             mtlPath,
@@ -60,9 +67,11 @@ export function loadSharedModel(mtlPath, objPath) {
                 material.alphaTest = Math.max(material.alphaTest, 0.5);
                 material.needsUpdate = true;
               });
-              const objectLoader = new OBJLoader();
-              objectLoader.setMaterials(materials);
-              objectLoader.load(objPath, loadResolve, undefined, loadReject);
+              objectText.then((text) => {
+                const objectLoader = new OBJLoader();
+                objectLoader.setMaterials(materials);
+                loadResolve(objectLoader.parse(text));
+              }).catch(loadReject);
             },
             undefined,
             loadReject

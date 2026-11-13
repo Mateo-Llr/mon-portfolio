@@ -519,32 +519,33 @@ async function scheduleThreeSceneInitialization() {
         startupLoaderLog.appendChild(lineElement);
         for (const character of line) {
           lineElement.textContent += character;
-          await new Promise((resolve) => window.setTimeout(resolve, 2 + Math.random() * 3));
+          await new Promise((resolve) => window.setTimeout(resolve, 8 + Math.random() * 6));
         }
         if (lineIndex < terminalLines.length - 1) lineElement.classList.remove("is-active");
-        await new Promise((resolve) => window.setTimeout(resolve, 15));
+        await new Promise((resolve) => window.setTimeout(resolve, 50));
       }
     })();
-    // --- Pipeline parallélisé -------------------------------------------------
-    // Avant : modèles -> import de room.js -> WebGL -> images -> compilation,
-    // chaque étape attendait la précédente (cascade). Désormais le module de
-    // la scène, les modèles et les images de titre se téléchargent en même temps.
+    // Tout ce qui est indépendant démarre immédiatement et en parallèle des modèles :
+    // les deux modules JS (téléchargement + analyse) et les images des titres.
     const modelCachePromise = import("./assets/datas/model-cache.js?v=alpha-cutout-2");
     const roomModulePromise = import("./assets/datas/room.js?v=alpha-cutout-7");
-
-    // Modèles indispensables au premier affichage (bloquent l'écran de chargement).
-    const criticalModelAssets = [
+    roomModulePromise.catch(() => {}); // évite un "unhandled rejection" avant le await plus bas
+    const imageAssets = projects.map((project) => project.gameTitleImage).filter(Boolean);
+    const imagePromises = imageAssets.map((path) => new Promise((resolve) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.onload = () => resolve({ path, image });
+      image.onerror = () => resolve({ path, image: null });
+      image.src = path;
+    }));
+    const { loadSharedModel } = await modelCachePromise;
+    const modelAssets = [
       ["assets/models/furniture/shelf.mtl", "assets/models/furniture/shelf.obj"],
       ["assets/models/furniture/table.mtl", "assets/models/furniture/table.obj"],
       ["assets/models/television.mtl", "assets/models/television.obj"],
       ["assets/models/Cassette.mtl", "assets/models/Cassette.obj"],
       ["assets/models/cup.mtl", "assets/models/cup.obj"],
-      ["assets/models/laptop.mtl", "assets/models/laptop.obj"]
-    ];
-    // Trophées de l'étagère : préchargés en arrière-plan, sans bloquer le chargement.
-    // (mettre BLOCK_ON_TROPHIES à true pour retrouver l'ancien comportement)
-    const BLOCK_ON_TROPHIES = false;
-    const deferredModelAssets = [
+      ["assets/models/laptop.mtl", "assets/models/laptop.obj"],
       ["assets/models/trophies/trophy_scratch.mtl", "assets/models/trophies/trophy_scratch.obj"],
       ["assets/models/trophies/trophy_python.mtl", "assets/models/trophies/trophy_python.obj"],
       ["assets/models/trophies/trophy_csharp.mtl", "assets/models/trophies/trophy_csharp.obj"],
@@ -558,40 +559,22 @@ async function scheduleThreeSceneInitialization() {
       ["assets/models/sql.mtl", "assets/models/sql.obj"],
       ["assets/models/java_cup.mtl", "assets/models/java_cup.obj"]
     ];
-    const blockingModelAssets = BLOCK_ON_TROPHIES ? [...criticalModelAssets, ...deferredModelAssets] : criticalModelAssets;
-    const titleImagePaths = projects.map((project) => project.gameTitleImage).filter(Boolean);
-
-    // Progression unique et monotone sur l'ensemble des tâches bloquantes (0 -> 78 %).
-    const totalTasks = blockingModelAssets.length + titleImagePaths.length + 1;
-    let completedTasks = 0;
-    const reportProgress = () => {
-      completedTasks += 1;
-      const progress = Math.round((completedTasks / totalTasks) * 78);
+    let loadedModels = 0;
+    startupLoader.querySelector("strong").textContent = "Chargement des objets";
+    const modelPromises = modelAssets.map(([mtlPath, objPath]) => loadSharedModel(mtlPath, objPath).then(() => {
+      loadedModels += 1;
+      const progress = Math.round((loadedModels / modelAssets.length) * 60);
       startupLoaderBar.style.width = `${progress}%`;
       startupLoaderProgress.textContent = `Chargement ${progress} %`;
-    };
+    }));
+    // La plante (room.js) n'était pas préchargée : elle se chargeait après la création de la scène.
+    // On la met en file juste derrière les autres, sans bloquer la barre de progression.
+    loadSharedModel("assets/models/plant_pot/plant_pot.mtl", "assets/models/plant_pot/plant_pot.obj").catch(() => {});
+    await Promise.all(modelPromises);
 
-    startupLoader.querySelector("strong").textContent = "Chargement des objets";
-    const { loadSharedModel } = await modelCachePromise;
-    const modelsPromise = Promise.all(blockingModelAssets.map(([mtlPath, objPath]) => loadSharedModel(mtlPath, objPath).then(reportProgress)));
-
-    const imagesPromise = Promise.all(titleImagePaths.map((path) => new Promise((resolve) => {
-      const image = new Image();
-      image.decoding = "async";
-      image.onload = () => {
-        const project = projects.find((entry) => entry.gameTitleImage === path);
-        if (project) project.gameTitleTexture = image;
-        reportProgress();
-        resolve();
-      };
-      image.onerror = () => { reportProgress(); resolve(); };
-      image.src = path;
-    })));
-
-    // Création de la scène dès que room.js est prêt (sans attendre les modèles :
-    // room.js les récupère via le cache partagé au fur et à mesure).
+    startupLoader.querySelector("strong").textContent = "Initialisation WebGL et chargement des textures";
+    startupLoaderProgress.textContent = "Chargement 60 %";
     const { createRoomScene } = await roomModulePromise;
-    reportProgress();
     roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);
@@ -610,15 +593,17 @@ async function scheduleThreeSceneInitialization() {
     roomScene.setTrophySelectHandler((id) => openTrophyPanel(id));
     roomScene.updateScreen(projects[0], true);
 
-    startupLoader.querySelector("strong").textContent = "Initialisation WebGL et chargement des textures";
-    await Promise.all([modelsPromise, imagesPromise]);
-
-    // Préchargement du reste en arrière-plan, une fois la partie bloquante terminée.
-    if (!BLOCK_ON_TROPHIES) {
-      window.setTimeout(() => {
-        Promise.allSettled(deferredModelAssets.map(([mtlPath, objPath]) => loadSharedModel(mtlPath, objPath)));
-      }, 0);
-    }
+    let loadedImages = 0;
+    await Promise.all(imagePromises.map((promise) => promise.then(({ path, image }) => {
+      if (image) {
+        const project = projects.find((entry) => entry.gameTitleImage === path);
+        if (project) project.gameTitleTexture = image;
+      }
+      loadedImages += 1;
+      const progress = 60 + Math.round((loadedImages / imageAssets.length) * 18);
+      startupLoaderBar.style.width = `${progress}%`;
+      startupLoaderProgress.textContent = `Chargement ${progress} %`;
+    })));
 
     await terminalTyping;
     startupLoader.querySelector("strong").textContent = "Compilation de la scène WebGL";
@@ -649,18 +634,22 @@ async function scheduleThreeSceneInitialization() {
           characterIndex -= 1;
           if (!hasCharacters) {
             loaderContent.style.opacity = "0";
-            window.setTimeout(resolve, 120);
+            window.setTimeout(resolve, 220);
             return;
           }
-          window.setTimeout(eraseNextCharacter, 6 + Math.random() * 6);
+          window.setTimeout(eraseNextCharacter, 20 + Math.random() * 12);
         };
         eraseNextCharacter();
-      }, 150);
+      }, 550);
     });
     roomScene.startIntroTransition();
     startupLoaderBar.style.width = "100%";
     startupLoaderProgress.textContent = "Chargement 100 %";
     startupLoader.classList.add("is-ready");
+    // Le fond d'écran du bureau Windows est invisible au démarrage : on ne le télécharge qu'après l'intro.
+    const loadDesktopWallpaper = () => desktopScreen?.classList.add("has-wallpaper");
+    if ("requestIdleCallback" in window) window.requestIdleCallback(loadDesktopWallpaper, { timeout: 2000 });
+    else window.setTimeout(loadDesktopWallpaper, 600);
   } catch (error) {
     console.error("Impossible de charger la scène 3D.", error);
     startupLoader.querySelector("strong").textContent = "Chargement impossible";

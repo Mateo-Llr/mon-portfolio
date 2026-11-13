@@ -8,8 +8,11 @@
     <link rel="icon" href="assets/icon.ico" type="image/x-icon" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Police du chargeur préchargée : évite un changement de police visible pendant le démarrage -->
+    <link rel="preload" href="assets/DinaB.ttf" as="font" type="font/ttf" crossorigin />
+    <!-- Doit rester bloquant : room.js dessine du texte dans des canvas avec ces polices (Space Grotesk, DM Mono, Bebas Neue) -->
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=desktop-notepad-7" />
+    <link rel="stylesheet" href="styles.css?v=desktop-notepad-8" />
     <script>
       const resizeDesignCanvas = () => {
         const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
@@ -31,14 +34,14 @@
     <link rel="modulepreload" href="./vendor/three/build/three.module.min.js" />
     <link rel="modulepreload" href="./vendor/three/addons/loaders/MTLLoader.js" />
     <link rel="modulepreload" href="./vendor/three/addons/loaders/OBJLoader.js" />
+    <!-- Les deux modules de la scène sont téléchargés dès l'analyse du HTML (mêmes URL que dans script.js) -->
     <link rel="modulepreload" href="./vendor/three/addons/postprocessing/EffectComposer.js" />
     <link rel="modulepreload" href="./vendor/three/addons/postprocessing/RenderPass.js" />
     <link rel="modulepreload" href="./vendor/three/addons/postprocessing/OutlinePass.js" />
     <link rel="modulepreload" href="./vendor/three/addons/postprocessing/OutputPass.js" />
-    <!-- Modules de la scène préchargés en parallèle (URLs identiques à celles de script.js / room.js) -->
-    <link rel="modulepreload" href="./assets/datas/room.js?v=alpha-cutout-7" />
-    <link rel="modulepreload" href="./assets/datas/model-cache.js?v=alpha-cutout-2" />
     <link rel="modulepreload" href="./assets/datas/screen-renderer.js?v=menu-themes-2" />
+    <link rel="modulepreload" href="./assets/datas/model-cache.js?v=alpha-cutout-2" />
+    <link rel="modulepreload" href="./assets/datas/room.js?v=alpha-cutout-7" />
   </head>
   <body>
     <div class="startup-loader" id="startupLoader" role="status" aria-live="polite">

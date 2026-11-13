@@ -1230,15 +1230,14 @@ export function createRoomScene(container, projects = []) {
     const storedLayoutVersion = Number(storedPositions?.layoutVersion ?? 0);
     let jsonConfiguration = null;
     let jsonCameraConfiguration = null;
+    // Les deux requêtes partent ensemble (avant : la seconde attendait la fin de la première).
+    const cameraRequest = fetch(CAMERA_FILE_PATH).then((response) => (response.ok ? response.json() : null)).catch(() => null);
     try {
       const response = await fetch("assets/datas/positions.json", { cache: "no-store" });
       if (response.ok) jsonConfiguration = await response.json();
     } catch { jsonConfiguration = null; }
     configuredPositions = jsonConfiguration || storedPositions || {};
-    try {
-      const response = await fetch(CAMERA_FILE_PATH);
-      if (response.ok) jsonCameraConfiguration = await response.json();
-    } catch { jsonCameraConfiguration = null; }
+    jsonCameraConfiguration = await cameraRequest;
     configuredCameraPositions = Array.isArray(jsonCameraConfiguration?.cameraPositions)
       ? jsonCameraConfiguration.cameraPositions
       : Array.isArray(jsonConfiguration?.cameraPositions)
