@@ -5,7 +5,7 @@ import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { loadSharedModel, onIdle, onVisible, loadSharedTexture, loadSharedPixelData, clearSharedCache } from "./model-cache.js?v=alpha-cutout-2";
 import { drawProjectScreen } from "./screen-renderer.js?v=menu-themes-2";
-import { createDaylight, sunPositionAt, moonPositionAt } from "./daylight.js?v=daylight-2";
+import { createDaylight, sunPositionAt, moonPositionAt } from "./daylight.js?v=daylight-3";
 
 function material(color, roughness = 0.72, metalness = 0) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness });
@@ -367,16 +367,19 @@ export function createRoomScene(container, projects = []) {
   const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 100);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-  const lowPowerDevice = !!(
-    (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)
-    || (navigator.deviceMemory && navigator.deviceMemory <= 4)
-  );
+  // Détection "appareil faible" + possibilité de forcer : ajouter ?quality=high (ou low) à l'URL.
+  const qualityOverride = new URLSearchParams(window.location.search).get("quality");
+  const lowPowerReasons = [];
+  if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) lowPowerReasons.push(`hardwareConcurrency=${navigator.hardwareConcurrency}`);
+  if (navigator.deviceMemory && navigator.deviceMemory <= 4) lowPowerReasons.push(`deviceMemory=${navigator.deviceMemory}`);
+  const lowPowerDevice = qualityOverride === "high" ? false : qualityOverride === "low" ? true : lowPowerReasons.length > 0;
   const qualityProfile = {
-    lowPower: lowPowerDevice || reducedMotion,
+    lowPower: qualityOverride === "high" ? false : (lowPowerDevice || reducedMotion),
     pixelRatio: lowPowerDevice ? 0.9 : Math.min(window.devicePixelRatio, 1.15),
     shadowMapSize: lowPowerDevice ? 1024 : 2048
   };
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, qualityProfile.pixelRatio));
+  console.info(`[room] qualité : ${qualityProfile.lowPower ? "basse" : "haute"}`, { qualityOverride, reducedMotion, lowPowerReasons });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = !qualityProfile.lowPower;
   renderer.shadowMap.type = qualityProfile.lowPower ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
