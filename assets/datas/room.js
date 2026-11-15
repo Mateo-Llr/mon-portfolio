@@ -5,6 +5,7 @@ import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { loadSharedModel, onIdle, onVisible, loadSharedTexture, loadSharedPixelData, clearSharedCache } from "./model-cache.js?v=alpha-cutout-2";
 import { drawProjectScreen } from "./screen-renderer.js?v=menu-themes-2";
+import { createDaylight, sunPositionAt, moonPositionAt } from "./daylight.js?v=daylight-2";
 
 function material(color, roughness = 0.72, metalness = 0) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness });
@@ -74,6 +75,8 @@ function addDynamicSky(scene, getHour) {
 
   const sun = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 8), new THREE.MeshBasicMaterial({ color: 0xffd47a }));
   const moon = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 8), new THREE.MeshBasicMaterial({ color: 0xd9e7ff }));
+  sun.userData.depthIgnore = true; // exclus de la passe de profondeur des rayons
+  moon.userData.depthIgnore = true;
   scene.add(sun, moon);
 
   const skyboxFaces = [];
@@ -146,9 +149,8 @@ function addDynamicSky(scene, getHour) {
       applySkyboxTint(daylight);
     }
 
-    const angle = ((hour - sunrise) / (sunset - sunrise)) * Math.PI;
-    sun.position.set(Math.cos(angle) * 22, Math.sin(angle) * 16 + 10, -18);
-    moon.position.set(-Math.cos(angle) * 20, -Math.sin(angle) * 14 + 12, -20);
+    sunPositionAt(hour, sun.position);
+    moonPositionAt(hour, moon.position);
     sun.visible = daylight > 0.08;
     moon.visible = daylight < 0.72;
   }
@@ -217,9 +219,13 @@ function fitModelToHeight(model, targetHeight) {
 }
 
 function addWindow(scene, x, width, height, y = 5.25, z = -6.055, hasSill = true) {
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0x8fcbd3, transparent: true, opacity: 0.2, roughness: 0.08, metalness: 0, transmission: 0.55, depthWrite: false });
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0x8fcbd3, transparent: true, opacity: 0.16, roughness: 0.05, metalness: 0, depthWrite: false });
   const frame = material(0x272f2c, 0.5);
-  scene.add(box(width, height, 0.1, glass, [x, y, z]));
+  const glassPane = box(width, height, 0.1, glass, [x, y, z]);
+  glassPane.castShadow = false; // la lumière doit traverser la vitre
+  glassPane.receiveShadow = false;
+  glassPane.userData.depthIgnore = true;
+  scene.add(glassPane);
   scene.add(box(0.12, height + 0.24, 0.16, frame, [x - width / 2, y, z + 0.11]));
   scene.add(box(0.12, height + 0.24, 0.16, frame, [x + width / 2, y, z + 0.11]));
   scene.add(box(width + 0.24, 0.12, 0.16, frame, [x, y - height / 2, z + 0.11]));
@@ -374,6 +380,10 @@ export function createRoomScene(container, projects = []) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = !qualityProfile.lowPower;
   renderer.shadowMap.type = qualityProfile.lowPower ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+  if (THREE.NeutralToneMapping !== undefined) {
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1;
+  }
 
   // Post-processing pipeline used only to draw the white hover halo around
   // a trophy's outer silhouette (OutlinePass draws a true silhouette edge
@@ -817,7 +827,10 @@ export function createRoomScene(container, projects = []) {
     return matchesCameraPose(currentPose, skillsPose);
   }
 
-  const windowLights = [
+  const sunlight = createDaylight({ renderer, scene, camera, qualityProfile });
+  window.__roomDebug.daylight = sunlight; // réglages en direct : __roomDebug.daylight.config
+  // Appareils faibles : on garde les anciens spots (aucune ombre, aucun volumétrique)
+  const windowLights = sunlight.enabled ? [] : [
     { position: [-5.7, 5.1, -5.25], intensity: 0.56, target: [-5.7, 1.5, 0.5] },
     { position: [4.8, 4.25, -5.25], intensity: 0.78, target: [4.8, 1.5, 0.5] }
   ].map(({ position, intensity }) => {
@@ -1520,9 +1533,14 @@ export function createRoomScene(container, projects = []) {
       ambientGroundColor.lerpColors(nightGroundColor, dayGroundColor, daylight);
       ambientLight.color.copy(ambientSkyColor);
       ambientLight.groundColor.copy(ambientGroundColor);
-      ambientLight.intensity = (0.9 + daylight * 1.2) * (qualityProfile.lowPower ? 0.8 : 1);
+      ambientLight.intensity = sunlight.enabled
+        ? sunlight.config.hemiNight + daylight * (sunlight.config.hemiDay - sunlight.config.hemiNight)
+        : (0.9 + daylight * 1.2) * (qualityProfile.lowPower ? 0.8 : 1);
+      sunlight.update(hour);
     }
-    ceilingLight.intensity = 16 + (1 - daylight) * 15;
+    ceilingLight.intensity = sunlight.enabled
+      ? sunlight.config.lampDay + (1 - daylight) * (sunlight.config.lampNight - sunlight.config.lampDay)
+      : 16 + (1 - daylight) * 15;
 
     if (televisionGlow) {
       const flicker = 0.96 + Math.sin(time * 0.028) * 0.025 + Math.sin(time * 0.11) * 0.012;
@@ -2367,6 +2385,7 @@ export function createRoomScene(container, projects = []) {
     updateTrophyShowcaseFit();
     composer.setSize(container.clientWidth, container.clientHeight);
     outlinePass.resolution.set(container.clientWidth, container.clientHeight);
+    sunlight.resize();
     updateCanvasBounds();
     if (activeRoomScreenProject) drawRoomScreen(activeRoomScreenProject, activeRoomScreenEjected);
   }
@@ -2737,6 +2756,7 @@ export function createRoomScene(container, projects = []) {
     } else {
       renderer.render(scene, camera);
     }
+    sunlight.renderShafts(time);
     if (introTransitionPending) {
       introTransitionPending = false;
       focusOnInitialView();
@@ -2935,7 +2955,37 @@ export function createRoomScene(container, projects = []) {
       Promise.resolve(compile).catch(() => {}).then(resolve);
     }));
   }));
-  ready.then(() => requestAnimationFrame(render));
+  // Le survol d'un objet bascule le rendu sur le composer (OutlinePass) : three.js doit alors compiler
+  // une 2e variante de TOUS les shaders (rendu vers texture) + ceux de l'OutlinePass, ce qui
+  // provoquait un à-coup au premier survol. On le fait en avance, pendant le chargement.
+  function prewarmOutlinePipeline(withRealPass) {
+    const previousTarget = renderer.getRenderTarget();
+    try {
+      renderer.setRenderTarget(composer.readBuffer);
+      if (renderer.compileAsync) renderer.compileAsync(scene, camera).catch(() => {});
+      else renderer.compile(scene, camera);
+    } catch (error) {
+      console.warn("Préchauffage du rendu de contour impossible.", error);
+    } finally {
+      renderer.setRenderTarget(previousTarget);
+    }
+    if (!withRealPass || outlinePass.selectedObjects.length > 0) return;
+    let sample = null;
+    scene.traverse((object) => {
+      if (!sample && object.isMesh && object.visible && object.geometry) sample = object;
+    });
+    if (!sample) return;
+    outlinePass.selectedObjects = [sample]; // compile aussi les passes internes de l'OutlinePass
+    composer.render();
+    outlinePass.selectedObjects = [];
+  }
+  ready.then(() => {
+    prewarmOutlinePipeline(true);
+    requestAnimationFrame(render);
+    // Les modèles 3D arrivent progressivement : on complète pour les derniers matériaux chargés.
+    window.setTimeout(() => prewarmOutlinePipeline(false), 2500);
+    window.setTimeout(() => prewarmOutlinePipeline(false), 6000);
+  });
 
   return {
     ready,

@@ -242,6 +242,8 @@ const sheetContent = document.querySelector("#sheetContent");
 const trophyPanel = document.querySelector("#trophyPanel");
 const trophyPanelTitle = document.querySelector("#trophyPanelTitle");
 const trophyPanelType = document.querySelector("#trophyPanelType");
+const trophyPanelKind = document.querySelector("#trophyPanelKind");
+const trophyPanelFocus = document.querySelector("#trophyPanelFocus");
 const trophyPanelDescription = document.querySelector("#trophyPanelDescription");
 const trophyPanelClose = document.querySelector("[data-close-trophy]");
 const startupLoader = document.querySelector("#startupLoader");
@@ -528,7 +530,7 @@ async function scheduleThreeSceneInitialization() {
     // Tout ce qui est indépendant démarre immédiatement et en parallèle des modèles :
     // les deux modules JS (téléchargement + analyse) et les images des titres.
     const modelCachePromise = import("./assets/datas/model-cache.js?v=alpha-cutout-2");
-    const roomModulePromise = import("./assets/datas/room.js?v=alpha-cutout-8");
+    const roomModulePromise = import("./assets/datas/room.js?v=daylight-2");
     roomModulePromise.catch(() => {}); // évite un "unhandled rejection" avant le await plus bas
     const imageAssets = projects.map((project) => project.gameTitleImage).filter(Boolean);
     const imagePromises = imageAssets.map((path) => new Promise((resolve) => {
@@ -721,15 +723,36 @@ function closeProjectSheet() {
   document.body.classList.remove("is-sheet-open");
 }
 
+// Les métas sont écrites en majuscules avec un « / » : on les découpe en « famille » + « sujet » en casse normale.
+const TROPHY_ACRONYMS = { ".net": ".NET", github: "GitHub" };
+function formatTrophyLabel(text) {
+  const lower = text.trim().toLocaleLowerCase("fr");
+  const fixed = TROPHY_ACRONYMS[lower] ?? lower.charAt(0).toLocaleUpperCase("fr") + lower.slice(1);
+  return fixed;
+}
+function splitTrophyMeta(meta) {
+  const parts = meta.replace(/&nbsp;/g, " ").split("/").map((part) => part.trim()).filter(Boolean);
+  return { kind: parts[0] ?? "", subject: parts.slice(1).join(" / ") };
+}
+function replayTrophyReveal() {
+  trophyPanel.classList.remove("is-revealing");
+  void trophyPanel.offsetWidth;
+  trophyPanel.classList.add("is-revealing");
+}
+
 function openTrophyPanel(id) {
   const trophy = trophies[id];
   if (!trophy || !trophyPanel) return;
   trophyPanelReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   trophyPanelTitle.innerHTML = trophy.title;
-  if (trophyPanelType) trophyPanelType.innerHTML = trophy.meta;
+  const { kind, subject } = splitTrophyMeta(trophy.meta);
+  if (trophyPanelKind) trophyPanelKind.textContent = formatTrophyLabel(kind);
+  if (trophyPanelType) trophyPanelType.textContent = subject ? formatTrophyLabel(subject) : "";
+  if (trophyPanelFocus) trophyPanelFocus.textContent = trophy.focus ?? "Apprentissage";
   trophyPanelDescription.textContent = trophy.description;
   trophyPanel.inert = false;
   trophyPanel.classList.add("is-visible");
+  replayTrophyReveal();
   trophyPanel.setAttribute("aria-hidden", "false");
   trophyPanelClose?.focus();
 }
@@ -745,7 +768,7 @@ function closeTrophyPanel() {
     if (returnFocus === document.body) document.body.removeAttribute("tabindex");
   }
   trophyPanel.inert = true;
-  trophyPanel.classList.remove("is-visible");
+  trophyPanel.classList.remove("is-visible", "is-revealing");
   trophyPanel.setAttribute("aria-hidden", "true");
   trophyPanelReturnFocus = null;
   roomScene.closeTrophyShowcase();

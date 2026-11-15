@@ -12,7 +12,7 @@
     <link rel="preload" href="assets/DinaB.ttf" as="font" type="font/ttf" crossorigin />
     <!-- Doit rester bloquant : room.js dessine du texte dans des canvas avec ces polices (Space Grotesk, DM Mono, Bebas Neue) -->
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=desktop-notepad-8" />
+    <link rel="stylesheet" href="styles.css?v=trophy-hud-1" />
     <script>
       const resizeDesignCanvas = () => {
         const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
@@ -41,7 +41,8 @@
     <link rel="modulepreload" href="./vendor/three/addons/postprocessing/OutputPass.js" />
     <link rel="modulepreload" href="./assets/datas/screen-renderer.js?v=menu-themes-2" />
     <link rel="modulepreload" href="./assets/datas/model-cache.js?v=alpha-cutout-2" />
-    <link rel="modulepreload" href="./assets/datas/room.js?v=alpha-cutout-8" />
+    <link rel="modulepreload" href="./assets/datas/room.js?v=daylight-2" />
+    <link rel="modulepreload" href="./assets/datas/daylight.js?v=daylight-2" />
   </head>
   <body>
     <div class="startup-loader" id="startupLoader" role="status" aria-live="polite">
@@ -111,28 +112,25 @@
       </div>
     </aside>
     <aside class="trophy-panel" id="trophyPanel" aria-hidden="true" inert aria-labelledby="trophyPanelTitle">
-      <div class="trophy-panel-inner">
-        <div class="trophy-panel-header">
-          <button class="trophy-panel-close" type="button" data-close-trophy aria-label="Fermer">FERMER <span>×</span></button>
-        </div>
-
-        <div class="trophy-panel-title-wrap">
-          <h2 id="trophyPanelTitle">SCRATCH</h2>
-          <span class="trophy-panel-type" id="trophyPanelType">LANGAGE / PROGRAMMATION VISUELLE</span>
-        </div>
-
-        <div class="trophy-panel-body">
-          <p class="trophy-panel-description" id="trophyPanelDescription"></p>
-
-          <div class="trophy-panel-meta-stack">
-            <div class="trophy-panel-meta-line">
-              <span class="trophy-panel-label">Focus</span>
-              <span class="trophy-panel-value">Apprentissage</span>
-            </div>
-          </div>
+      <div class="trophy-scrim" aria-hidden="true"></div>
+      <div class="trophy-panel-top">
+        <p class="trophy-panel-kind" id="trophyPanelKind" data-reveal style="--d:.05s">Langage</p>
+        <div class="trophy-panel-close-wrap" data-reveal style="--d:.1s">
+          <button class="trophy-panel-close" type="button" data-close-trophy aria-label="Fermer">Fermer <span aria-hidden="true">×</span></button>
+          <span class="trophy-panel-hint" aria-hidden="true">ou touche Échap</span>
         </div>
       </div>
+      <div class="trophy-panel-main">
+        <h2 id="trophyPanelTitle" data-reveal style="--d:.1s">SCRATCH</h2>
+        <p class="trophy-panel-type" id="trophyPanelType" data-reveal style="--d:.18s"></p>
+        <div class="trophy-panel-rule" aria-hidden="true" data-reveal style="--d:.22s"></div>
+        <p class="trophy-panel-description" id="trophyPanelDescription" data-reveal style="--d:.28s"></p>
+      </div>
+      <dl class="trophy-panel-focus" data-reveal style="--d:.38s">
+        <dt class="trophy-panel-label">Focus</dt>
+        <dd class="trophy-panel-value" id="trophyPanelFocus">Apprentissage</dd>
+      </dl>
     </aside>
-    <script type="module" src="script.js?v=desktop-notepad-12"></script>
+    <script type="module" src="script.js?v=trophy-hud-1"></script>
   </body>
 </html>
