@@ -5,7 +5,7 @@ import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { loadSharedModel, onIdle, onVisible, loadSharedTexture, loadSharedPixelData, clearSharedCache } from "./model-cache.js?v=alpha-cutout-2";
 import { drawProjectScreen } from "./screen-renderer.js?v=menu-themes-2";
-import { createDaylight, sunPositionAt, moonPositionAt } from "./daylight.js?v=daylight-3";
+import { createDaylight, sunPositionAt, moonPositionAt } from "./daylight.js?v=daylight-4";
 
 function material(color, roughness = 0.72, metalness = 0) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness });
@@ -370,11 +370,11 @@ export function createRoomScene(container, projects = []) {
   // Détection "appareil faible" + possibilité de forcer : ajouter ?quality=high (ou low) à l'URL.
   const qualityOverride = new URLSearchParams(window.location.search).get("quality");
   const lowPowerReasons = [];
-  if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) lowPowerReasons.push(`hardwareConcurrency=${navigator.hardwareConcurrency}`);
-  if (navigator.deviceMemory && navigator.deviceMemory <= 4) lowPowerReasons.push(`deviceMemory=${navigator.deviceMemory}`);
+  // Qualité haute par défaut. deviceMemory est arrondi/peu fiable : ignoré. Seuls les très petits CPU passent en profil bas.
+  if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) lowPowerReasons.push(`hardwareConcurrency=${navigator.hardwareConcurrency}`);
   const lowPowerDevice = qualityOverride === "high" ? false : qualityOverride === "low" ? true : lowPowerReasons.length > 0;
   const qualityProfile = {
-    lowPower: qualityOverride === "high" ? false : (lowPowerDevice || reducedMotion),
+    lowPower: lowPowerDevice,
     pixelRatio: lowPowerDevice ? 0.9 : Math.min(window.devicePixelRatio, 1.15),
     shadowMapSize: lowPowerDevice ? 1024 : 2048
   };
