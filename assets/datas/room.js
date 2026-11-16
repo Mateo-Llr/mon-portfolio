@@ -7,6 +7,18 @@ import { loadSharedModel, onIdle, onVisible, loadSharedTexture, loadSharedPixelD
 import { drawProjectScreen } from "./screen-renderer.js?v=menu-themes-2";
 import { createDaylight, sunPositionAt, moonPositionAt } from "./daylight.js?v=daylight-4";
 
+// Correctif des "coutures" entre polygones : avec l'antialiasing MSAA du canvas, les pixels de bord
+// d'un triangle sont échantillonnés hors du triangle et les coordonnées UV sont alors extrapolées.
+// Avec des textures en NearestFilter (palettes de couleurs), cela pioche le texel voisin et dessine
+// un fin liseré sur chaque arête. Le qualificatif `centroid` force l'interpolation à l'intérieur
+// du triangle. Ce patch doit s'exécuter avant la compilation du premier shader.
+["uv_pars_vertex", "uv_pars_fragment"].forEach((chunkName) => {
+  const chunk = THREE.ShaderChunk[chunkName];
+  if (typeof chunk === "string" && !chunk.includes("centroid")) {
+    THREE.ShaderChunk[chunkName] = chunk.replace(/varying (highp |mediump |lowp )?vec2/g, "centroid varying $1vec2");
+  }
+});
+
 function material(color, roughness = 0.72, metalness = 0) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness });
 }
@@ -392,7 +404,14 @@ export function createRoomScene(container, projects = []) {
   // a trophy's outer silhouette (OutlinePass draws a true silhouette edge
   // from the object's screen-space shape, not per-polygon lines), so it
   // renders one clean contour instead of tracing every facet of the model.
-  const composer = new EffectComposer(renderer);
+  // Le composer est désormais le SEUL chemin de rendu (survol ou non) : l'image reste donc identique
+  // en permanence. Sa cible de rendu est multi-échantillonnée (MSAA) pour conserver un antialiasing
+  // équivalent à celui du canvas ; sans cela, le rendu paraîtrait plus "coupant" (crénelé).
+  const composerTarget = new THREE.WebGLRenderTarget(1, 1, {
+    type: THREE.HalfFloatType,
+    samples: qualityProfile.lowPower ? 2 : 4
+  });
+  const composer = new EffectComposer(renderer, composerTarget);
   const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
   const outlinePass = new OutlinePass(new THREE.Vector2(1, 1), scene, camera);
@@ -2754,11 +2773,8 @@ export function createRoomScene(container, projects = []) {
     updateAboutPhotoPresentation(time);
     updateTrophyShowcaseTransition();
     updateTrophyShowcaseTilt();
-    if (outlinePass.selectedObjects.length > 0) {
-      composer.render();
-    } else {
-      renderer.render(scene, camera);
-    }
+    // Toujours via le composer : l'OutlinePass ne fait rien quand selectedObjects est vide.
+    composer.render();
     sunlight.renderShafts(time);
     if (introTransitionPending) {
       introTransitionPending = false;
