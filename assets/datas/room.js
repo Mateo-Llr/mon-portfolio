@@ -892,7 +892,10 @@ export function createRoomScene(container, projects = []) {
   let roomTelevisionFeaturesLoaded = false;
   let roomCup = null;
   let roomLaptop = null;
+  let roomPhone = null;
+  let roomPhoneModel = null;
   let roomLaptopHandler = null;
+  let roomPhoneHandler = null;
   let televisionGlow = null;
   let roomScreenMaterial = null;
   let roomBaseScreenMap = null;
@@ -2139,7 +2142,7 @@ export function createRoomScene(container, projects = []) {
           material.map.needsUpdate = true;
         });
       });
-      const cupLabel = createPropLabel("CONTACT", { fontSize: 48, fontWeight: 700, strokeWidth: 1.6, width: 0.4, height: 0.15, canvasHeight: 128 });
+      const cupLabel = createPropLabel("PARCOURS", { fontSize: 48, fontWeight: 700, strokeWidth: 1.6, width: 0.4, height: 0.15, canvasHeight: 128 });
       cupLabel.position.set(0, 0.30, 0.2);
       rawCup.add(cupLabel);
       roomCup.visible = false;
@@ -2149,6 +2152,41 @@ export function createRoomScene(container, projects = []) {
         markShadowsDirty();
       });
     }, (error) => console.error("Impossible de charger le modèle cup de la pièce.", error));
+
+    loadSharedModel("assets/models/phone.mtl", "assets/models/phone.obj").then((template) => {
+      const rawPhone = template.clone();
+      const model = centerModelPivot(rawPhone);
+      roomPhone = model;
+      roomPhoneModel = rawPhone;
+      roomPhone.name = "phone";
+      roomPhone.position.set(-5.25, 2.15, -2.35);
+      roomPhone.rotation.y = Math.PI;
+      roomPhone.scale.setScalar(0.8);
+      applyConfiguredPosition("phone", roomPhone);
+      rawPhone.traverse((part) => {
+        if (!part.isMesh) return;
+        part.castShadow = true;
+        part.receiveShadow = true;
+        const materials = Array.isArray(part.material) ? part.material : [part.material];
+        materials.forEach((material) => {
+          if (!material.map) return;
+          material.map.magFilter = THREE.NearestFilter;
+          material.map.minFilter = THREE.NearestFilter;
+          material.map.anisotropy = 1;
+          material.map.needsUpdate = true;
+        });
+      });
+      const phoneLabel = createPropLabel("CONTACT", { fontSize: 64, fontWeight: 700, strokeWidth: 1.6, width: 0.42, height: 0.14, canvasHeight: 128, backgroundColor: "transparent", textColor: "#ffffff" });
+      phoneLabel.position.set(rawPhone.position.x, 0.68, rawPhone.position.z - 0.13);
+      phoneLabel.rotation.y = Math.PI;
+      roomPhone.add(phoneLabel);
+      roomPhone.visible = false;
+      scene.add(roomPhone);
+      prepareRoomModel(roomPhone).then(() => {
+        roomPhone.visible = true;
+        markShadowsDirty();
+      });
+    }, (error) => console.error("Impossible de charger le modèle téléphone de la pièce.", error));
 
     loadSharedModel("assets/models/laptop.mtl", "assets/models/laptop.obj").then((template) => {
       const rawLaptop = template.clone();
@@ -2181,20 +2219,9 @@ export function createRoomScene(container, projects = []) {
       laptopScreenContext.lineWidth = 3;
       laptopScreenContext.strokeStyle = "#111713";
       laptopScreenContext.fillStyle = "#ffffff";
-      laptopScreenContext.font = "700 52px 'Space Grotesk', sans-serif";
-      laptopScreenContext.strokeText("MES PROJETS", 450, 46);
-      laptopScreenContext.fillText("MES PROJETS", 450, 46);
-      laptopScreenContext.strokeStyle = "rgba(255, 255, 255, .7)";
-      laptopScreenContext.lineWidth = 2;
-      laptopScreenContext.beginPath();
-      laptopScreenContext.moveTo(145, 90);
-      laptopScreenContext.lineTo(755, 90);
-      laptopScreenContext.stroke();
-      laptopScreenContext.font = "700 36px 'Space Grotesk', sans-serif";
-      laptopScreenContext.strokeStyle = "#111713";
-      laptopScreenContext.lineWidth = 3;
-      laptopScreenContext.strokeText("BUREAU WINDOWS", 450, 136);
-      laptopScreenContext.fillText("BUREAU WINDOWS", 450, 136);
+      laptopScreenContext.font = "700 72px 'Space Grotesk', sans-serif";
+      laptopScreenContext.strokeText("MES PROJETS", 450, 90);
+      laptopScreenContext.fillText("MES PROJETS", 450, 90);
       const laptopScreenTexture = new THREE.CanvasTexture(laptopScreenCanvas);
       laptopScreenTexture.colorSpace = THREE.SRGBColorSpace;
       laptopScreenTexture.minFilter = THREE.NearestFilter;
@@ -2224,6 +2251,7 @@ export function createRoomScene(container, projects = []) {
       { id: "television", label: "Télévision", object: roomTelevision },
       { id: "cup", label: "Tasse", object: roomCup },
       { id: "laptop", label: "Laptop", object: roomLaptop },
+      { id: "phone", label: "Téléphone", object: roomPhone },
       { id: "cork-board", label: "Tableau en liège", object: scene.getObjectByName("cork-board") },
       { id: "my-photo", label: "Photo de Mateo", object: scene.getObjectByName("my-photo") },
       { id: "scratch-trophy", label: "Trophée Scratch", object: scene.getObjectByName("scratch-trophy") },
@@ -2456,6 +2484,7 @@ export function createRoomScene(container, projects = []) {
     if (activeInteractionCameraIndex === 2) {
       if (roomCup) roomInteractiveObjects.push(roomCup);
       if (roomLaptop) roomInteractiveObjects.push(roomLaptop);
+      if (roomPhone) roomInteractiveObjects.push(roomPhone);
       const shelfReturnHitZone = scene.getObjectByName("shelf-return-hit-zone");
       if (shelfReturnHitZone) roomInteractiveObjects.push(shelfReturnHitZone);
     } else if (activeInteractionCameraIndex === 3) {
@@ -2486,7 +2515,7 @@ export function createRoomScene(container, projects = []) {
       let hitObject = hit.object;
       while (hitObject) {
         if (hitObject.userData?.interactionType === "laptop-screen") {
-          return { type: "laptop", action: (hit.uv?.y ?? 0) >= 0.5 ? "projects" : "desktop" };
+          return { type: "laptop", action: "projects" };
         }
         if (hitObject.name === "plant-return-label") return { type: "return-main" };
         if (hitObject.name === "my-photo-return-label") return { type: "about-return" };
@@ -2518,6 +2547,7 @@ export function createRoomScene(container, projects = []) {
       }
       if (roomCup?.getObjectById(hit.object.id)) return { type: "cup" };
       if (roomLaptop?.getObjectById(hit.object.id)) return { type: "laptop" };
+      if (roomPhone?.getObjectById(hit.object.id)) return { type: "phone" };
       const trophy = shelfTrophies.find((entry) => entry.getObjectById(hit.object.id));
       if (trophy) return { type: "trophy", name: trophy.name };
     }
@@ -2534,6 +2564,7 @@ export function createRoomScene(container, projects = []) {
     if (interaction.type === "television" || interaction.type === "television-action") return roomTelevision;
     if (interaction.type === "cup") return roomCup;
     if (interaction.type === "laptop") return roomLaptop;
+    if (interaction.type === "phone") return roomPhoneModel;
     if (interaction.type === "trophy") return shelfTrophies.find((entry) => entry.name === interaction.name) || null;
     if (interaction.type === "return-main") return scene.getObjectByName("plant") || null;
     if (interaction.type === "projects") return scene.getObjectByName("tv-stand") || null;
@@ -2663,6 +2694,7 @@ export function createRoomScene(container, projects = []) {
     if (interaction.type === "television-action") roomTelevisionActionHandler?.(interaction.action);
     if (interaction.type === "cup") roomCupHandler?.();
     if (interaction.type === "laptop") roomLaptopHandler?.(interaction.action);
+    if (interaction.type === "phone") roomPhoneHandler?.();
     if (interaction.type === "return-main") {
       focusOnInitialView();
       return;
@@ -3030,6 +3062,9 @@ export function createRoomScene(container, projects = []) {
     },
     setCupHandler(handler) {
       roomCupHandler = handler;
+    },
+    setPhoneHandler(handler) {
+      roomPhoneHandler = handler;
     },
     setLaptopHandler(handler) {
       roomLaptopHandler = handler;

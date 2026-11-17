@@ -381,6 +381,15 @@
     "rotationY": -206,
     "scale": 1.5
   },
+  "phone": {
+    "position": {
+      "x": -5.792,
+      "y": 2.15,
+      "z": -2.523
+    },
+    "rotationY": 199,
+    "scale": 0.9
+  },
   "world-title-label": {
     "position": {
       "x": -6.054,

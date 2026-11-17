@@ -476,6 +476,7 @@ let roomScene = {
   onProjectsFocusReached() {},
   activateTelevisionFeatures() {},
   setCupHandler() {},
+  setPhoneHandler() {},
   setLaptopHandler() {},
   setReturnHandler() {},
   setProjectsHandler() {},
@@ -502,6 +503,27 @@ function handleTelevisionClick() {
   if (!ejectInsertedCassette()) roomScene.focusOnProjects();
 }
 
+const TERMINAL_CHARS_PER_SECOND = 520;
+const TERMINAL_LINE_PAUSE_MS = 25;
+const TERMINAL_MAX_FRAME_MS = 200;
+const TERMINAL_ERASE_DELAY_MS = 120;
+const TERMINAL_ERASE_DURATION_MS = 220;
+const TERMINAL_FADE_MS = 180;
+
+// Prochaine image d'affichage, avec un repli sur un timer pour ne pas bloquer si l'onglet est en arrière-plan
+function nextFrame() {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve(performance.now());
+    };
+    requestAnimationFrame(finish);
+    window.setTimeout(finish, 50);
+  });
+}
+
 async function scheduleThreeSceneInitialization() {
   try {
     const terminalLines = [
@@ -514,17 +536,28 @@ async function scheduleThreeSceneInitialization() {
       "Camera system .... Ready",
       "Startup sequence . Running"
     ];
+    // Frappe synchronisée sur l'affichage : plusieurs caractères par image, vitesse indépendante de la charge CPU
     const terminalTyping = (async () => {
+      let previousTime = await nextFrame();
       for (const [lineIndex, line] of terminalLines.entries()) {
         const lineElement = document.createElement("div");
         lineElement.className = "startup-loader-log-line is-active";
         startupLoaderLog.appendChild(lineElement);
-        for (const character of line) {
-          lineElement.textContent += character;
-          await new Promise((resolve) => window.setTimeout(resolve, 8 + Math.random() * 6));
+        let typed = 0;
+        let carry = 0;
+        while (typed < line.length) {
+          const now = await nextFrame();
+          carry += (Math.min(now - previousTime, TERMINAL_MAX_FRAME_MS) / 1000) * TERMINAL_CHARS_PER_SECOND;
+          previousTime = now;
+          const step = Math.floor(carry);
+          if (step > 0) {
+            carry -= step;
+            typed = Math.min(line.length, typed + step);
+            lineElement.textContent = line.slice(0, typed);
+          }
         }
         if (lineIndex < terminalLines.length - 1) lineElement.classList.remove("is-active");
-        await new Promise((resolve) => window.setTimeout(resolve, 50));
+        await new Promise((resolve) => window.setTimeout(resolve, TERMINAL_LINE_PAUSE_MS));
       }
     })();
     // Tout ce qui est indépendant démarre immédiatement et en parallèle des modèles :
@@ -548,6 +581,7 @@ async function scheduleThreeSceneInitialization() {
       ["assets/models/Cassette.mtl", "assets/models/Cassette.obj"],
       ["assets/models/cup.mtl", "assets/models/cup.obj"],
       ["assets/models/laptop.mtl", "assets/models/laptop.obj"],
+      ["assets/models/phone.mtl", "assets/models/phone.obj"],
       ["assets/models/trophies/trophy_scratch.mtl", "assets/models/trophies/trophy_scratch.obj"],
       ["assets/models/trophies/trophy_python.mtl", "assets/models/trophies/trophy_python.obj"],
       ["assets/models/trophies/trophy_csharp.mtl", "assets/models/trophies/trophy_csharp.obj"],
@@ -583,13 +617,10 @@ async function scheduleThreeSceneInitialization() {
     roomScene.onProjectsFocusReached(() => roomScene.activateTelevisionFeatures());
     roomScene.setCassetteSelectHandler((index) => selectProject(index));
     roomScene.setCupHandler(() => roomScene.focusOnCameraIndex(9));
-    roomScene.setLaptopHandler((action) => {
-      if (action === "desktop") {
-        roomScene.focusOnCameraIndex(1, () => setDesktopVisible(true));
-      } else {
-        roomScene.focusOnCameraIndex(3);
-      }
+    roomScene.setPhoneHandler(() => {
+      roomScene.focusOnCameraIndex(1, () => setDesktopVisible(true));
     });
+    roomScene.setLaptopHandler(() => roomScene.focusOnCameraIndex(3));
     roomScene.setReturnHandler(() => roomScene.focusOnInitialView());
     roomScene.setProjectsHandler(() => roomScene.focusOnAchievements());
     roomScene.setTrophySelectHandler((id) => openTrophyPanel(id));
@@ -623,26 +654,21 @@ async function scheduleThreeSceneInitialization() {
         startupLoader.querySelector("#startupLoaderProgress")
       ];
       const originalTexts = textNodes.map((node) => node.textContent);
-      let characterIndex = Math.max(...originalTexts.map((text) => text.length));
-      window.setTimeout(() => {
-        const eraseNextCharacter = () => {
-          let hasCharacters = false;
+      const maxLength = Math.max(...originalTexts.map((text) => text.length));
+      window.setTimeout(async () => {
+        const startTime = await nextFrame();
+        while (true) {
+          const elapsed = (await nextFrame()) - startTime;
+          const progress = Math.min(1, elapsed / TERMINAL_ERASE_DURATION_MS);
+          const characterIndex = Math.round(maxLength * (1 - progress));
           textNodes.forEach((node, index) => {
-            const text = originalTexts[index];
-            const visibleLength = Math.max(0, Math.min(text.length, characterIndex));
-            node.textContent = text.slice(0, visibleLength);
-            if (visibleLength > 0) hasCharacters = true;
+            node.textContent = originalTexts[index].slice(0, characterIndex);
           });
-          characterIndex -= 1;
-          if (!hasCharacters) {
-            loaderContent.style.opacity = "0";
-            window.setTimeout(resolve, 220);
-            return;
-          }
-          window.setTimeout(eraseNextCharacter, 20 + Math.random() * 12);
-        };
-        eraseNextCharacter();
-      }, 550);
+          if (progress >= 1) break;
+        }
+        loaderContent.style.opacity = "0";
+        window.setTimeout(resolve, TERMINAL_FADE_MS);
+      }, TERMINAL_ERASE_DELAY_MS);
     });
     roomScene.startIntroTransition();
     startupLoaderBar.style.width = "100%";
