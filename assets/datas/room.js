@@ -1772,26 +1772,18 @@ export function createRoomScene(container, projects = [], options = {}) {
     return mesh;
   }
 
-  // Grande note « Crédits » du panneau en liège : reprend le contenu du Bloc-notes du Bureau
-  // (titre, puis sections « TITRE / texte » séparées par une ligne vide).
-  function createCreditsNote(text, { width = 1.1, height = 1.2 } = {}) {
-    const canvasWidth = 640;
-    const canvasHeight = Math.round((canvasWidth * height) / width);
+  // Post-it « Crédits » : un par section du Bloc-notes (titre sur 1-2 lignes + texte), même style que les autres notes.
+  function createInfoNote(title, body, { color = "#f7dd66", size = 0.6 } = {}) {
+    const canvasSize = 384;
     const canvas = document.createElement("canvas");
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
+    canvas.width = canvasSize;
+    canvas.height = canvasSize;
     const context = canvas.getContext("2d");
-    const blocks = `${text}`
-      .split(/\r?\n\s*\r?\n/)
-      .map((block) => block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean))
-      .filter((lines) => lines.length);
-    const subtitle = blocks.length ? blocks[0].join(" ") : "";
-    const sections = blocks.slice(1).map(([heading, ...body]) => ({ heading, body: body.join(" ") }));
-    const margin = 44;
-    const maxTextWidth = canvasWidth - margin * 2;
+    const padding = 30;
+    const maxTextWidth = canvasSize - padding * 2;
 
     const wrap = (value, maxWidth) => {
-      const words = value.split(/\s+/).filter(Boolean);
+      const words = `${value}`.split(/\s+/).filter(Boolean);
       const wrapped = [];
       let current = "";
       words.forEach((word) => {
@@ -1807,60 +1799,51 @@ export function createRoomScene(container, projects = [], options = {}) {
       return wrapped;
     };
 
-    // Plus grande taille de texte pour laquelle toutes les sections tiennent sur la note.
-    const layoutFor = (bodySize) => {
-      const headingSize = bodySize + 2;
-      const lineHeight = bodySize * 1.3;
-      const gap = bodySize * 0.95;
-      let y = 196;
-      const placed = sections.map(({ heading, body }) => {
-        context.font = `500 ${bodySize}px 'DM Mono', monospace`;
-        const lines = wrap(body, maxTextWidth);
-        const entry = { heading, headingY: y + headingSize, lines, firstLineY: y + headingSize * 1.45 + bodySize };
-        y += headingSize * 1.45 + lines.length * lineHeight + gap;
-        return entry;
-      });
-      return { headingSize, lineHeight, placed, bottom: y - gap };
-    };
-
     const paint = () => {
-      context.clearRect(0, 0, canvasWidth, canvasHeight);
-      context.fillStyle = "#f7dd66";
-      context.fillRect(0, 0, canvasWidth, canvasHeight);
+      context.clearRect(0, 0, canvasSize, canvasSize);
+      context.fillStyle = color;
+      context.fillRect(0, 0, canvasSize, canvasSize);
       context.strokeStyle = "rgba(0, 0, 0, 0.1)";
-      context.lineWidth = 10;
-      context.strokeRect(5, 5, canvasWidth - 10, canvasHeight - 10);
+      context.lineWidth = 8;
+      context.strokeRect(4, 4, canvasSize - 8, canvasSize - 8);
 
+      // Titre : la plus grande taille qui tient sur 2 lignes maximum.
+      let titleSize = 40;
+      let titleLines = [];
+      for (; titleSize >= 20; titleSize -= 2) {
+        context.font = `700 ${titleSize}px 'Space Grotesk', sans-serif`;
+        titleLines = wrap(title, maxTextWidth);
+        if (titleLines.length <= 2 && titleLines.every((line) => context.measureText(line).width <= maxTextWidth)) break;
+      }
+      titleSize = Math.max(titleSize, 20);
+      const titleStep = titleSize * 1.12;
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.font = "700 64px 'Space Grotesk', sans-serif";
+      context.font = `700 ${titleSize}px 'Space Grotesk', sans-serif`;
       context.lineJoin = "round";
-      context.lineWidth = 9;
+      context.lineWidth = Math.max(3, titleSize * 0.12);
       context.strokeStyle = "#000000";
       context.fillStyle = "#ffffff";
-      context.strokeText("CRÉDITS", canvasWidth / 2, 82);
-      context.fillText("CRÉDITS", canvasWidth / 2, 82);
-      if (subtitle) {
-        context.font = "500 22px 'DM Mono', monospace";
-        context.fillStyle = "rgba(0, 0, 0, 0.7)";
-        context.fillText(subtitle, canvasWidth / 2, 142);
-      }
+      titleLines.forEach((line, index) => {
+        const y = padding + titleSize * 0.6 + index * titleStep;
+        context.strokeText(line, canvasSize / 2, y);
+        context.fillText(line, canvasSize / 2, y);
+      });
+      const titleBottom = padding + titleSize * 0.6 + (titleLines.length - 1) * titleStep + titleSize * 0.6;
 
+      // Texte : la plus grande taille qui tient dans la place restante.
       let bodySize = 26;
-      let layout = layoutFor(bodySize);
-      while (bodySize > 16 && layout.bottom > canvasHeight - margin) {
-        bodySize -= 1;
-        layout = layoutFor(bodySize);
-      }
-      context.textAlign = "left";
-      context.textBaseline = "alphabetic";
-      layout.placed.forEach(({ heading, headingY, lines, firstLineY }) => {
-        context.font = `700 ${layout.headingSize}px 'Space Grotesk', sans-serif`;
-        context.fillStyle = "#5b2a0e";
-        context.fillText(heading, margin, headingY);
+      let bodyLines = [];
+      for (; bodySize >= 15; bodySize -= 1) {
         context.font = `500 ${bodySize}px 'DM Mono', monospace`;
-        context.fillStyle = "#000000";
-        lines.forEach((line, index) => context.fillText(line, margin, firstLineY + index * layout.lineHeight));
+        bodyLines = wrap(body, maxTextWidth);
+        if (titleBottom + 22 + bodyLines.length * bodySize * 1.3 <= canvasSize - padding + 6) break;
+      }
+      bodySize = Math.max(bodySize, 15);
+      context.font = `500 ${bodySize}px 'DM Mono', monospace`;
+      context.fillStyle = "#000000";
+      bodyLines.forEach((line, index) => {
+        context.fillText(line, canvasSize / 2, titleBottom + 22 + bodySize * 0.65 + index * bodySize * 1.3);
       });
     };
 
@@ -1871,7 +1854,7 @@ export function createRoomScene(container, projects = [], options = {}) {
     texture.magFilter = THREE.LinearFilter;
     // Les polices Google ne sont parfois pas encore prêtes au premier dessin : on redessine quand elles le sont.
     if (document.fonts?.load) {
-      Promise.all(["700 64px 'Space Grotesk'", "500 24px 'DM Mono'"].map((font) => document.fonts.load(font)))
+      Promise.all(["700 40px 'Space Grotesk'", "500 24px 'DM Mono'"].map((font) => document.fonts.load(font)))
         .then(() => {
           paint();
           texture.needsUpdate = true;
@@ -1880,7 +1863,7 @@ export function createRoomScene(container, projects = [], options = {}) {
     }
 
     const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(width, height),
+      new THREE.PlaneGeometry(size, size),
       new THREE.MeshStandardMaterial({ map: texture, roughness: 0.88, metalness: 0 })
     );
     mesh.name = "credits-note";
@@ -1943,18 +1926,30 @@ export function createRoomScene(container, projects = [], options = {}) {
       boardGroup.add(stickyPin);
     });
 
-    // Note « Crédits » : même contenu que le Bloc-notes du Bureau. Ajoutée avant centerFurniturePivot()
-    // pour être recentrée avec le reste du panneau.
-    if (creditsText.trim()) {
-      const creditsNote = createCreditsNote(creditsText);
-      creditsNote.position.set(8.93, 4.15, -5.665);
-      creditsNote.rotation.z = -0.03;
-      boardGroup.add(creditsNote);
+    // Post-it « Crédits » : une note par section du Bloc-notes du Bureau (la première ligne de chaque bloc
+    // est le titre). Ajoutés avant centerFurniturePivot() pour être recentrés avec le reste du panneau.
+    const creditsSections = creditsText
+      .split(/\r?\n\s*\r?\n/)
+      .map((block) => block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean))
+      .filter((lines) => lines.length)
+      .slice(1) // le 1er bloc est le titre général du Bloc-notes
+      .map(([heading, ...body]) => ({ heading, body: body.join(" ") }));
+    const creditsNoteSize = 0.6;
+    const creditsColors = ["#f7dd66", "#a9dcb8", "#a9cdf0", "#f2b8c6"];
+    const creditsTilts = [-0.05, 0.03, -0.025, 0.04];
+    const creditsSpacing = creditsSections.length > 1 ? Math.min(0.9, (2.4 - creditsNoteSize) / (creditsSections.length - 1)) : 0;
+    creditsSections.forEach(({ heading, body }, index) => {
+      const x = 9.75 + (index - (creditsSections.length - 1) / 2) * creditsSpacing;
+      const y = 4.52;
+      const note = createInfoNote(heading, body, { color: creditsColors[index % creditsColors.length], size: creditsNoteSize });
+      note.position.set(x, y, -5.665);
+      note.rotation.z = creditsTilts[index % creditsTilts.length];
+      boardGroup.add(note);
       const creditsPin = new THREE.Mesh(pinGeometry, pinMaterial);
-      creditsPin.position.set(8.93, 4.15 + 0.55, -5.659);
+      creditsPin.position.set(x, y + creditsNoteSize / 2 - 0.06, -5.659);
       creditsPin.rotation.x = Math.PI / 2;
       boardGroup.add(creditsPin);
-    }
+    });
 
     // Without this, boardGroup's own origin stays at world (0,0,0) while its
     // children sit ~9.75/4.15/-5.8 away from it - so scaling or rotating the
