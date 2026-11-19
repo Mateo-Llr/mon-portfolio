@@ -363,7 +363,9 @@ function addShelf(scene, shelves, x, y, z, withInteractiveContent = true, object
   return group;
 }
 
-export function createRoomScene(container, projects = []) {
+export function createRoomScene(container, projects = [], options = {}) {
+  // Texte des crédits (le même que celui du Bloc-notes du Bureau), affiché sur le panneau en liège.
+  const creditsText = typeof options.creditsText === "string" ? options.creditsText : "";
   const POSITION_STORAGE_KEY = "mateo-portfolio-room-positions";
   const CAMERA_STORAGE_KEY = "mateo-portfolio-camera-positions";
   const CAMERA_FILE_PATH = "assets/datas/camera.json";
@@ -381,6 +383,10 @@ export function createRoomScene(container, projects = []) {
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
   // Détection "appareil faible" + possibilité de forcer : ajouter ?quality=high (ou low) à l'URL.
   const qualityOverride = new URLSearchParams(window.location.search).get("quality");
+  // Rendu : le composer (MSAA 4x en HalfFloat + OutputPass) n'est utilisé que pendant un survol, quand le halo
+  // blanc de l'OutlinePass est nécessaire. Ajouter ?composer=always à l'URL rétablit l'ancien comportement
+  // (composer en permanence) pour comparer le rendu.
+  const alwaysUseComposer = new URLSearchParams(window.location.search).get("composer") === "always";
   const lowPowerReasons = [];
   // Qualité haute par défaut. deviceMemory est arrondi/peu fiable : ignoré. Seuls les très petits CPU passent en profil bas.
   if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) lowPowerReasons.push(`hardwareConcurrency=${navigator.hardwareConcurrency}`);
@@ -1766,6 +1772,121 @@ export function createRoomScene(container, projects = []) {
     return mesh;
   }
 
+  // Grande note « Crédits » du panneau en liège : reprend le contenu du Bloc-notes du Bureau
+  // (titre, puis sections « TITRE / texte » séparées par une ligne vide).
+  function createCreditsNote(text, { width = 1.1, height = 1.2 } = {}) {
+    const canvasWidth = 640;
+    const canvasHeight = Math.round((canvasWidth * height) / width);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const context = canvas.getContext("2d");
+    const blocks = `${text}`
+      .split(/\r?\n\s*\r?\n/)
+      .map((block) => block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean))
+      .filter((lines) => lines.length);
+    const subtitle = blocks.length ? blocks[0].join(" ") : "";
+    const sections = blocks.slice(1).map(([heading, ...body]) => ({ heading, body: body.join(" ") }));
+    const margin = 44;
+    const maxTextWidth = canvasWidth - margin * 2;
+
+    const wrap = (value, maxWidth) => {
+      const words = value.split(/\s+/).filter(Boolean);
+      const wrapped = [];
+      let current = "";
+      words.forEach((word) => {
+        const candidate = current ? `${current} ${word}` : word;
+        if (current && context.measureText(candidate).width > maxWidth) {
+          wrapped.push(current);
+          current = word;
+        } else {
+          current = candidate;
+        }
+      });
+      if (current) wrapped.push(current);
+      return wrapped;
+    };
+
+    // Plus grande taille de texte pour laquelle toutes les sections tiennent sur la note.
+    const layoutFor = (bodySize) => {
+      const headingSize = bodySize + 2;
+      const lineHeight = bodySize * 1.3;
+      const gap = bodySize * 0.95;
+      let y = 196;
+      const placed = sections.map(({ heading, body }) => {
+        context.font = `500 ${bodySize}px 'DM Mono', monospace`;
+        const lines = wrap(body, maxTextWidth);
+        const entry = { heading, headingY: y + headingSize, lines, firstLineY: y + headingSize * 1.45 + bodySize };
+        y += headingSize * 1.45 + lines.length * lineHeight + gap;
+        return entry;
+      });
+      return { headingSize, lineHeight, placed, bottom: y - gap };
+    };
+
+    const paint = () => {
+      context.clearRect(0, 0, canvasWidth, canvasHeight);
+      context.fillStyle = "#f7dd66";
+      context.fillRect(0, 0, canvasWidth, canvasHeight);
+      context.strokeStyle = "rgba(0, 0, 0, 0.1)";
+      context.lineWidth = 10;
+      context.strokeRect(5, 5, canvasWidth - 10, canvasHeight - 10);
+
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.font = "700 64px 'Space Grotesk', sans-serif";
+      context.lineJoin = "round";
+      context.lineWidth = 9;
+      context.strokeStyle = "#000000";
+      context.fillStyle = "#ffffff";
+      context.strokeText("CRÉDITS", canvasWidth / 2, 82);
+      context.fillText("CRÉDITS", canvasWidth / 2, 82);
+      if (subtitle) {
+        context.font = "500 22px 'DM Mono', monospace";
+        context.fillStyle = "rgba(0, 0, 0, 0.7)";
+        context.fillText(subtitle, canvasWidth / 2, 142);
+      }
+
+      let bodySize = 26;
+      let layout = layoutFor(bodySize);
+      while (bodySize > 16 && layout.bottom > canvasHeight - margin) {
+        bodySize -= 1;
+        layout = layoutFor(bodySize);
+      }
+      context.textAlign = "left";
+      context.textBaseline = "alphabetic";
+      layout.placed.forEach(({ heading, headingY, lines, firstLineY }) => {
+        context.font = `700 ${layout.headingSize}px 'Space Grotesk', sans-serif`;
+        context.fillStyle = "#5b2a0e";
+        context.fillText(heading, margin, headingY);
+        context.font = `500 ${bodySize}px 'DM Mono', monospace`;
+        context.fillStyle = "#000000";
+        lines.forEach((line, index) => context.fillText(line, margin, firstLineY + index * layout.lineHeight));
+      });
+    };
+
+    paint();
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    // Les polices Google ne sont parfois pas encore prêtes au premier dessin : on redessine quand elles le sont.
+    if (document.fonts?.load) {
+      Promise.all(["700 64px 'Space Grotesk'", "500 24px 'DM Mono'"].map((font) => document.fonts.load(font)))
+        .then(() => {
+          paint();
+          texture.needsUpdate = true;
+        })
+        .catch(() => {});
+    }
+
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, height),
+      new THREE.MeshStandardMaterial({ map: texture, roughness: 0.88, metalness: 0 })
+    );
+    mesh.name = "credits-note";
+    return mesh;
+  }
+
   function addCorkBoard(scene) {
     const boardTexture = loadSharedTexture("assets/textures/board.png");
     boardTexture.colorSpace = THREE.SRGBColorSpace;
@@ -1803,7 +1924,6 @@ export function createRoomScene(container, projects = []) {
     const pinGeometry = new THREE.CylinderGeometry(0.032, 0.032, 0.06, 10);
     const pinMaterial = material(0x8e7d66, 0.35);
     const stickyNotes = [
-      { title: "CONTACT", lines: ["mateoleuillier", "@outlook.fr"], color: "#f7dd66", x: 9.12, y: 4.54, z: -5.665, rotationZ: -0.07, interactionType: "mailto", actionUrl: "mailto:mateoleuillier@outlook.fr", iconPath: "assets/textures/icons/contact.png" },
       { title: "MENTIONS LÉGALES", lines: ["Portfolio", "personnel"], color: "#f2c6a0", x: 9.75, y: 3.86, z: -5.665, rotationZ: -0.08 },
       { title: "Retour", lines: [], color: "#d9534f", textColor: "#ffffff", x: 10.38, y: 3.74, z: -5.665, rotationZ: 0.12, interactionType: "return", iconPath: "assets/textures/icons/case.png" }
     ];
@@ -1822,6 +1942,19 @@ export function createRoomScene(container, projects = []) {
       }
       boardGroup.add(stickyPin);
     });
+
+    // Note « Crédits » : même contenu que le Bloc-notes du Bureau. Ajoutée avant centerFurniturePivot()
+    // pour être recentrée avec le reste du panneau.
+    if (creditsText.trim()) {
+      const creditsNote = createCreditsNote(creditsText);
+      creditsNote.position.set(8.93, 4.15, -5.665);
+      creditsNote.rotation.z = -0.03;
+      boardGroup.add(creditsNote);
+      const creditsPin = new THREE.Mesh(pinGeometry, pinMaterial);
+      creditsPin.position.set(8.93, 4.15 + 0.55, -5.659);
+      creditsPin.rotation.x = Math.PI / 2;
+      boardGroup.add(creditsPin);
+    }
 
     // Without this, boardGroup's own origin stays at world (0,0,0) while its
     // children sit ~9.75/4.15/-5.8 away from it - so scaling or rotating the
@@ -2142,7 +2275,7 @@ export function createRoomScene(container, projects = []) {
           material.map.needsUpdate = true;
         });
       });
-      const cupLabel = createPropLabel("PARCOURS", { fontSize: 48, fontWeight: 700, strokeWidth: 1.6, width: 0.4, height: 0.15, canvasHeight: 128 });
+      const cupLabel = createPropLabel("CRÉDITS", { fontSize: 48, fontWeight: 700, strokeWidth: 1.6, width: 0.4, height: 0.15, canvasHeight: 128 });
       cupLabel.position.set(0, 0.30, 0.2);
       rawCup.add(cupLabel);
       roomCup.visible = false;
@@ -2460,6 +2593,27 @@ export function createRoomScene(container, projects = []) {
     applyCameraRotation();
   }
 
+  // scene.getObjectByName() parcourt toute la scène : on mémorise les objets trouvés (tant qu'ils restent dans la scène).
+  const namedObjectCache = new Map();
+  function getNamedObject(name) {
+    const cached = namedObjectCache.get(name);
+    if (cached && cached.parent) return cached;
+    const found = scene.getObjectByName(name);
+    if (found) namedObjectCache.set(name, found);
+    else namedObjectCache.delete(name);
+    return found;
+  }
+  let cachedTelevisionScreen = null;
+  let cachedTelevisionScreenOwner = null;
+  function getTelevisionScreen() {
+    if (!roomTelevision) return null;
+    if (cachedTelevisionScreenOwner !== roomTelevision || !cachedTelevisionScreen) {
+      cachedTelevisionScreen = roomTelevision.getObjectByName("screen") || null;
+      cachedTelevisionScreenOwner = roomTelevision;
+    }
+    return cachedTelevisionScreen;
+  }
+
   function getRoomInteraction(event) {
     if (editor.active || cameraTransition || showcasedTrophyName) return null;
     roomInteractionPointer.set(
@@ -2468,14 +2622,14 @@ export function createRoomScene(container, projects = []) {
     );
     editor.raycaster.setFromCamera(roomInteractionPointer, camera);
     roomInteractiveObjects.length = 0;
-    const plantReturnLabel = scene.getObjectByName("plant-return-label");
-    const salonReturnPlantLabel = scene.getObjectByName("salon-return-plant-label");
-    const projectsLabel = scene.getObjectByName("projects-label");
-    const shelfReturnButton = scene.getObjectByName("shelf-return-button");
-    const shelfSkillsLabel = scene.getObjectByName("shelf-skills-label");
-    const corkBoard = scene.getObjectByName("cork-board");
-    const myPhoto = scene.getObjectByName("my-photo");
-    const myPhotoReturnLabel = scene.getObjectByName("my-photo-return-label");
+    const plantReturnLabel = getNamedObject("plant-return-label");
+    const salonReturnPlantLabel = getNamedObject("salon-return-plant-label");
+    const projectsLabel = getNamedObject("projects-label");
+    const shelfReturnButton = getNamedObject("shelf-return-button");
+    const shelfSkillsLabel = getNamedObject("shelf-skills-label");
+    const corkBoard = getNamedObject("cork-board");
+    const myPhoto = getNamedObject("my-photo");
+    const myPhotoReturnLabel = getNamedObject("my-photo-return-label");
     if (activeInteractionCameraIndex === 0) {
       if (myPhotoReturnLabel) roomInteractiveObjects.push(myPhotoReturnLabel);
     } else if (myPhoto) {
@@ -2485,12 +2639,12 @@ export function createRoomScene(container, projects = []) {
       if (roomCup) roomInteractiveObjects.push(roomCup);
       if (roomLaptop) roomInteractiveObjects.push(roomLaptop);
       if (roomPhone) roomInteractiveObjects.push(roomPhone);
-      const shelfReturnHitZone = scene.getObjectByName("shelf-return-hit-zone");
+      const shelfReturnHitZone = getNamedObject("shelf-return-hit-zone");
       if (shelfReturnHitZone) roomInteractiveObjects.push(shelfReturnHitZone);
     } else if (activeInteractionCameraIndex === 3) {
       if (plantReturnLabel) roomInteractiveObjects.push(plantReturnLabel);
       if (projectsLabel) roomInteractiveObjects.push(projectsLabel);
-      const shelfModel = scene.getObjectByName("shelf-model");
+      const shelfModel = getNamedObject("shelf-model");
       if (shelfModel) roomInteractiveObjects.push(shelfModel);
       if (shelfSkillsLabel) roomInteractiveObjects.push(shelfSkillsLabel);
     } else if (activeInteractionCameraIndex === 4) {
@@ -2539,7 +2693,7 @@ export function createRoomScene(container, projects = []) {
       const cassetteIndex = roomCassettes.findIndex((cassette) => cassette?.getObjectById(hit.object.id));
       if (cassetteIndex !== -1) return { type: "cassette", index: cassetteIndex };
       if (roomTelevision?.getObjectById(hit.object.id)) {
-        const screenMesh = roomTelevision.getObjectByName("screen");
+        const screenMesh = getTelevisionScreen();
         const actionUv = hit.object === screenMesh ? hit.uv1 : hit.uv;
         if (hit.object === screenMesh && isRoomAction(actionUv, 255, 0, 0)) return { type: "television-action", action: "red" };
         if (hit.object === screenMesh && isRoomAction(actionUv, 0, 0, 255)) return { type: "television-action", action: "blue" };
@@ -2559,17 +2713,17 @@ export function createRoomScene(container, projects = []) {
     if (!interaction) return null;
     if (interaction.highlightObject) return interaction.highlightObject;
     if (interaction.type === "cassette") return roomCassettes[interaction.index] || null;
-    if (interaction.type === "about-me") return scene.getObjectByName("my-photo") || null;
-    if (interaction.type === "about-return") return scene.getObjectByName("my-photo-return-label") || null;
+    if (interaction.type === "about-me") return getNamedObject("my-photo") || null;
+    if (interaction.type === "about-return") return getNamedObject("my-photo-return-label") || null;
     if (interaction.type === "television" || interaction.type === "television-action") return roomTelevision;
     if (interaction.type === "cup") return roomCup;
     if (interaction.type === "laptop") return roomLaptop;
     if (interaction.type === "phone") return roomPhoneModel;
     if (interaction.type === "trophy") return shelfTrophies.find((entry) => entry.name === interaction.name) || null;
-    if (interaction.type === "return-main") return scene.getObjectByName("plant") || null;
-    if (interaction.type === "projects") return scene.getObjectByName("tv-stand") || null;
-    if (interaction.type === "camera" && interaction.index === 5) return scene.getObjectByName("shelf-model") || null;
-    if (interaction.type === "return-salon") return scene.getObjectByName("shelf-return-button") || null;
+    if (interaction.type === "return-main") return getNamedObject("plant") || null;
+    if (interaction.type === "projects") return getNamedObject("tv-stand") || null;
+    if (interaction.type === "camera" && interaction.index === 5) return getNamedObject("shelf-model") || null;
+    if (interaction.type === "return-salon") return getNamedObject("shelf-return-button") || null;
     return null;
   }
 
@@ -2658,7 +2812,7 @@ export function createRoomScene(container, projects = []) {
         -((event.clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1
       );
       editor.raycaster.setFromCamera(roomInteractionPointer, camera);
-      const hit = editor.raycaster.intersectObject(roomTelevision.getObjectByName("screen"), false)[0];
+      const hit = editor.raycaster.intersectObject(getTelevisionScreen(), false)[0];
       if (hit?.uv1) roomActionUniforms.hoverUv.value.copy(hit.uv1);
       roomActionUniforms.hasHoveredAction.value = 1;
     } else {
@@ -2769,7 +2923,27 @@ export function createRoomScene(container, projects = []) {
     }
   }
 
+  // Bureau Windows ouvert : l'écran opaque couvre toute la scène, inutile de la calculer (après la fin du fondu).
+  // Fiche projet ouverte : la scène est assombrie derrière, 30 fps suffisent.
+  let desktopHiddenSince = null;
+  let lastThrottledRenderTime = 0;
   function render(time) {
+    const bodyClasses = document.body.classList;
+    if (bodyClasses.contains("is-desktop-mode")) {
+      if (desktopHiddenSince === null) desktopHiddenSince = time;
+      if (time - desktopHiddenSince > 700) {
+        render.previousTime = undefined;
+        requestAnimationFrame(render);
+        return;
+      }
+    } else {
+      desktopHiddenSince = null;
+      if (bodyClasses.contains("is-sheet-open") && time - lastThrottledRenderTime < 30) {
+        requestAnimationFrame(render);
+        return;
+      }
+      lastThrottledRenderTime = time;
+    }
     const deltaTime = Math.min(0.05, (time - (render.previousTime || time)) / 1000);
     render.previousTime = time;
     updateDynamicLighting(time);
@@ -2805,8 +2979,9 @@ export function createRoomScene(container, projects = []) {
     updateAboutPhotoPresentation(time);
     updateTrophyShowcaseTransition();
     updateTrophyShowcaseTilt();
-    // Toujours via le composer : l'OutlinePass ne fait rien quand selectedObjects est vide.
-    composer.render();
+    // Composer (halo de survol) seulement quand un objet est survolé ; sinon rendu direct, bien moins coûteux.
+    if (alwaysUseComposer || outlinePass.selectedObjects.length > 0) composer.render();
+    else renderer.render(scene, camera);
     sunlight.renderShafts(time);
     if (introTransitionPending) {
       introTransitionPending = false;

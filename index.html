@@ -12,7 +12,7 @@
     <link rel="preload" href="assets/DinaB.ttf" as="font" type="font/ttf" crossorigin />
     <!-- Doit rester bloquant : room.js dessine du texte dans des canvas avec ces polices (Space Grotesk, DM Mono, Bebas Neue) -->
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=trophy-hud-1" />
+    <link rel="stylesheet" href="styles.css?v=perf-2" />
     <script>
       const resizeDesignCanvas = () => {
         const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
@@ -41,7 +41,7 @@
     <link rel="modulepreload" href="./vendor/three/addons/postprocessing/OutputPass.js" />
     <link rel="modulepreload" href="./assets/datas/screen-renderer.js?v=menu-themes-2" />
     <link rel="modulepreload" href="./assets/datas/model-cache.js?v=alpha-cutout-2" />
-    <link rel="modulepreload" href="./assets/datas/room.js?v=daylight-4" />
+    <link rel="modulepreload" href="./assets/datas/room.js?v=perf-2" />
     <link rel="modulepreload" href="./assets/datas/daylight.js?v=daylight-4" />
   </head>
   <body>
@@ -70,6 +70,7 @@
         <div class="desktop-shortcut" role="listitem"><img class="desktop-app-icon" src="assets/textures/desktop/icon_chrome.png" alt=""><span>Google Chrome</span></div>
         <button class="desktop-shortcut" type="button" role="listitem" data-launch-notepad><img class="desktop-app-icon" src="assets/textures/desktop/icon_notes.png" alt=""><span>Bloc-notes</span></button>
         <div class="desktop-shortcut" role="listitem"><img class="desktop-app-icon" src="assets/textures/desktop/icon_folder.png" alt=""><span>Explorateur de fichiers</span></div>
+        <a class="desktop-shortcut" role="listitem" href="mailto:mateoleuillier@outlook.fr" data-launch-outlook aria-label="Outlook — écrire à mateoleuillier@outlook.fr"><img class="desktop-app-icon" src="assets/textures/desktop/icon_outlook.png" alt=""><span>Outlook</span></a>
       </div>
       <div class="desktop-selection" id="desktopSelection" aria-hidden="true" hidden></div>
       <section class="notepad-window" id="notepadWindow" role="dialog" aria-label="Bloc-notes — Création du portfolio" aria-hidden="true" hidden>
@@ -131,6 +132,6 @@
         <dd class="trophy-panel-value" id="trophyPanelFocus">Apprentissage</dd>
       </dl>
     </aside>
-    <script type="module" src="script.js?v=trophy-hud-1"></script>
+    <script type="module" src="script.js?v=perf-2"></script>
   </body>
 </html>

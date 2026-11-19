@@ -50,8 +50,9 @@ button { cursor: pointer; }
 .desktop-mark i { display: block; background: #f6f7f8; }
 .desktop-shortcuts { position: absolute; z-index: 1; top: 100px; left: 28px; display: grid; gap: 12px; }
 .desktop-shortcut { display: grid; justify-items: center; gap: 7px; width: 112px; min-height: 96px; padding: 9px 4px; border: 1px solid transparent; color: #fff; background: transparent; font: 500 9px var(--mono); text-align: center; text-shadow: 0 1px 5px rgba(0, 20, 50, .85); }
-.desktop-shortcut[data-launch-notepad] { cursor: pointer; }
-.desktop-shortcut[data-launch-notepad]:hover, .desktop-shortcut[data-launch-notepad]:focus-visible { border-color: rgba(255,255,255,.38); outline: none; background: rgba(233, 249, 255, .16); }
+.desktop-shortcut[data-launch-outlook] { color: #fff; text-decoration: none; }
+.desktop-shortcut[data-launch-notepad], .desktop-shortcut[data-launch-outlook] { cursor: pointer; }
+.desktop-shortcut[data-launch-notepad]:hover, .desktop-shortcut[data-launch-notepad]:focus-visible, .desktop-shortcut[data-launch-outlook]:hover, .desktop-shortcut[data-launch-outlook]:focus-visible { border-color: rgba(255,255,255,.38); outline: none; background: rgba(233, 249, 255, .16); }
 .desktop-app-icon { display: block; width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated; }
 .desktop-selection { position: absolute; z-index: 3; border: 1px solid rgba(103, 177, 255, .95); background: rgba(50, 132, 255, .28); pointer-events: none; }
 .desktop-selection[hidden] { display: none; }
@@ -795,3 +796,8 @@ body.is-projects-focus .cassette-stage { opacity: 1; transition: opacity .35s ea
   .project-sheet .sheet-tools { margin-top: 14px; }
   .project-sheet .sheet-gallery { gap: 6px; margin-top: 12px; }
 }
+
+/* Perf : ces deux calques sont en z-index négatif, sous le canvas WebGL opaque (.room-model, z-index 0).
+   Ils ne sont jamais visibles ; on évite simplement de les peindre. */
+.studio::after,
+.table-edge { display: none; }

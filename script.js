@@ -563,7 +563,7 @@ async function scheduleThreeSceneInitialization() {
     // Tout ce qui est indépendant démarre immédiatement et en parallèle des modèles :
     // les deux modules JS (téléchargement + analyse) et les images des titres.
     const modelCachePromise = import("./assets/datas/model-cache.js?v=alpha-cutout-2");
-    const roomModulePromise = import("./assets/datas/room.js?v=daylight-4");
+    const roomModulePromise = import("./assets/datas/room.js?v=perf-2");
     roomModulePromise.catch(() => {}); // évite un "unhandled rejection" avant le await plus bas
     const imageAssets = projects.map((project) => project.gameTitleImage).filter(Boolean);
     const imagePromises = imageAssets.map((path) => new Promise((resolve) => {
@@ -611,7 +611,7 @@ async function scheduleThreeSceneInitialization() {
     startupLoader.querySelector("strong").textContent = "Initialisation WebGL et chargement des textures";
     startupLoaderProgress.textContent = "Chargement 60 %";
     const { createRoomScene } = await roomModulePromise;
-    roomScene = createRoomScene(document.querySelector("#roomModel"), projects);
+    roomScene = createRoomScene(document.querySelector("#roomModel"), projects, { creditsText: NOTEPAD_DEFAULT_TEXT });
     roomScene.setTelevisionHandler(handleTelevisionClick);
     roomScene.setTelevisionActionHandler(handleTelevisionClick);
     roomScene.onProjectsFocusReached(() => roomScene.activateTelevisionFeatures());
